@@ -1,0 +1,53 @@
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.resize-handle {
+  background-color: #f0f0f0;
+  position: relative;
+}
+
+.resize-handle:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px solid #ddd;
+}
+
+.editor-container, .visualization-container {
+  padding: 10px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.visualization-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+/* 树形图样式 */
+.link {
+  fill: none;
+  stroke: #999;
+  stroke-opacity: 0.6;
+  stroke-width: 1.5px;
+}
+
+.node circle {
+  fill: #999;
+}
+
+.node text {
+  font: 10px sans-serif;
+}

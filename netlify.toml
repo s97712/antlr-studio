@@ -1,0 +1,9 @@
+[build]
+  command = "cd apps/web && npm run build"
+  publish = "apps/web/dist"
+
+[functions]
+  directory = "netlify/functions"
+  included_files = ["netlify/functions/antlr-compiler/antlr-4.13.1-complete.jar"]
+
+# 不再需要Java插件

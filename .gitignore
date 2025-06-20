@@ -1,0 +1,33 @@
+# Local Netlify folder
+.netlify
+
+# Node modules
+node_modules
+
+# Build output
+dist
+build
+
+# pnpm lockfile
+pnpm-lock.yaml
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/reports/
+cypress/results/
+cypress/coverage/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
