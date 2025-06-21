@@ -9,6 +9,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0', // 允许外部访问
+    port: 5173,
     proxy: {
       '/.netlify/functions': {
         target: 'http://localhost:8888',
