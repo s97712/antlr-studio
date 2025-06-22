@@ -1,94 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './App.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import EditorPanel from './components/EditorPanel';
 import ParseTree from './components/ParseTree';
 
+import { parseInput } from './utils/parser';
+import { convertTree } from './utils/treeConverter';
+import { EXAMPLE_GRAMMAR, EXAMPLE_INPUT } from './constants';
+
 const App: React.FC = () => {
   // 示例语法（简单算术表达式）
-  const exampleGrammar = `grammar Expr;
-prog: expr EOF;
-expr: expr ('*'|'/') expr
-     | expr ('+'|'-') expr
-     | INT
-     | '(' expr ')'
-     ;
-INT: [0-9]+;
-WS: [ \\t\\r\\n]+ -> skip;`;
+  const exampleGrammar = EXAMPLE_GRAMMAR;
 
   // 示例输入文本
-  const exampleInput = '1+2*3';
+  const exampleInput = EXAMPLE_INPUT;
 
   const [grammar, setGrammar] = useState<string>(exampleGrammar);
   const [input, setInput] = useState<string>(exampleInput);
-  const [parseTree, setParseTree] = useState<any>(null);
+  const [visualTree, setVisualTree] = useState<any>(null); // 新增状态：可视化树
   const [errors, setErrors] = useState<string[]>([]);
-  const [worker, setWorker] = useState<Worker | null>(null);
-  
-  // 初始化Worker
-  useEffect(() => {
-    const newWorker = new Worker(new URL('@/workers/parserWorker', import.meta.url), {
-      type: 'module'
-    });
-    
-    newWorker.onmessage = (e) => {
-      if (e.data.type === 'PARSE_RESULT') {
-        setParseTree(e.data.tree);
-        setErrors([]);
-      } else if (e.data.type === 'PARSER_ERROR' || e.data.type === 'PARSE_ERROR') {
-        setErrors([e.data.error]);
-      }
-    };
-    
-    setWorker(newWorker);
-    
-    return () => {
-      newWorker.terminate();
-    };
-  }, []);
-  
-  const handleParse = () => {
-    if (!worker) {
-      setErrors(['Worker未初始化']);
-      return;
-    }
-    
+  const handleParse = async () => {
     if (!grammar.trim()) {
       setErrors(['请提供语法']);
       return;
     }
+    setVisualTree(null); // 重置可视化树
+    setErrors([]); // 清空错误
     
-    // 先加载解析器
-    worker.postMessage({
-      type: 'LOAD_PARSER',
-      grammar
-    });
-    
-    setErrors(['正在加载解析器...']);
+    try {
+      const tree = await parseInput(grammar, input);
+      
+      // 转换解析树为可视化格式
+      const vt = convertTree(tree);
+      setVisualTree(vt);
+    } catch (error) {
+      console.error('解析失败:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setErrors([errorMessage]);
+    }
   };
-  
-  // 处理解析器加载完成
-  useEffect(() => {
-    if (!worker) return;
-    
-    const handleParserReady = () => {
-      // 解析器加载完成后解析输入
-      worker.postMessage({
-        type: 'PARSE_INPUT',
-        input
-      });
-    };
-    
-    worker.addEventListener('message', (e) => {
-      if (e.data.type === 'PARSER_READY') {
-        handleParserReady();
-      }
-    });
-    
-    return () => {
-      worker.removeEventListener('message', handleParserReady);
-    };
-  }, [worker, input]);
   
   return (
     <div className="app-container">
@@ -135,11 +85,15 @@ WS: [ \\t\\r\\n]+ -> skip;`;
             {errors.length > 0 && (
               <div className="error-panel">
                 {errors.map((error, i) => (
-                  <div key={i} className="error-message">{error}</div>
+                  <div key={i} className="error-message">
+                    {error}
+                  </div>
                 ))}
               </div>
             )}
-            <ParseTree data={parseTree} />
+            <div data-testid="parse-tree-container">
+              {visualTree ? <ParseTree data={visualTree} /> : <div>解析树加载中...</div>}
+            </div>
           </div>
         </Panel>
       </PanelGroup>
@@ -148,3 +102,4 @@ WS: [ \\t\\r\\n]+ -> skip;`;
 };
 
 export default App;
+

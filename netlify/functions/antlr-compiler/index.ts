@@ -6,7 +6,7 @@ import path from 'path';
 export const handler: Handler = async (event) => {
   // 解析请求体
   const body = JSON.parse(event.body || '{}');
-  const { grammar, language = 'TypeScript', grammarName = 'Grammar' } = body;
+  const { grammar, language = 'JavaScript', grammarName = 'Grammar' } = body;
   
   if (!grammar) {
     return {
@@ -40,14 +40,15 @@ export const handler: Handler = async (event) => {
     
     // 执行编译命令
     console.log('开始执行ANTLR编译...');
-    execSync(
-      `java -jar "${jarPath}" -Dlanguage=${language} -visitor -o ${outputDir} ${grammarPath}`,
+    const compileResult = execSync(
+      `java -jar "${jarPath}" -Dlanguage=${language} -Dts=false -Dmodule=ES6 -o ${outputDir} ${grammarPath}`,
       {
         timeout: 30000,
-        stdio: "inherit"
+        // stdio: "inherit"
       }
     );
     console.log('ANTLR编译完成');
+    console.log('ANTLR编译输出:', compileResult.toString());
     
     // 递归读取目录中的所有文件
     const readFilesRecursively = (dir: string, baseDir: string = dir) => {
@@ -61,7 +62,7 @@ export const handler: Handler = async (event) => {
         if (entry.isDirectory()) {
           const nestedFiles = readFilesRecursively(fullPath, baseDir);
           Object.assign(files, nestedFiles);
-        } else if (entry.isFile()) {
+        } else if (entry.isFile() && entry.name.endsWith('.js')) { // 只读取 .js 文件
           files[relativePath] = fs.readFileSync(fullPath, 'utf-8');
         }
       }
@@ -75,12 +76,17 @@ export const handler: Handler = async (event) => {
     
     console.log(`成功生成 ${Object.keys(outputFiles).length} 个文件`);
     
+    // 打印每个生成文件的内容
+    for (const [fileName, content] of Object.entries(outputFiles)) {
+      console.log(`文件: ${fileName}\n内容: ${content.substring(0, 500)}...\n---`);
+    }
+
     console.log(`成功读取 ${Object.keys(outputFiles).length} 个文件`);
     
     // 将输出文件对象转换为数组格式
-    const outputArray = Object.entries(outputFiles).map(([fileName, content]) => ({
-      fileName,
-      content
+    const outputArray = Object.entries(generatedFiles).map(([fileName, content]) => ({
+      fileName: fileName,
+      content: content
     }));
     
     return {

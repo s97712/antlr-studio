@@ -17,7 +17,7 @@ async function testCompiler() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         grammar,
-        language: 'TypeScript',
+        language: 'JavaScript',
         grammarName
       }),
       timeout: 30000 // 30秒超时
@@ -47,7 +47,7 @@ async function testCompiler() {
     // 打印所有文件的内容预览
     data.forEach(file => {
       console.log(`\n文件: ${file.fileName}`);
-      console.log(`内容预览:\n${file.content.substring(0, 200)}...`);
+      console.log(`完整内容:\n${file.content}`);
     });
   } else {
     const error = await response.text();

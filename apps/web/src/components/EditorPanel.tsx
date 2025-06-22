@@ -27,24 +27,20 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
     if (!editorRef.current) return;
 
     // 根据语言选择高亮扩展
-    const highlightExtension = language === 'antlr'
-      ? [syntaxHighlighting(antlrGrammarSyntax)]
-      : [];
-
     const state = EditorState.create({
       doc: value,
       extensions: [
         basicSetup,
         keymap.of([indentWithTab]),
-        ...highlightExtension,
+        language === 'antlr' ? syntaxHighlighting(antlrGrammarSyntax) : [],
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
             const newValue = update.state.doc.toString();
             onChange(newValue);
           }
         }),
-        EditorView.editable.of(!readOnly),
-        EditorState.readOnly.of(readOnly)
+        EditorState.readOnly.of(readOnly),
+        EditorView.editable.of(!readOnly)
       ]
     });
 
@@ -59,7 +55,7 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
       view.destroy();
       editorViewRef.current = null;
     };
-  }, [language, readOnly]);
+  }, [language, readOnly, value, onChange]);
 
   useEffect(() => {
     if (editorViewRef.current && editorViewRef.current.state.doc.toString() !== value) {

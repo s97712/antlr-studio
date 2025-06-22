@@ -5,7 +5,12 @@ module.exports = defineConfig({
     baseUrl: 'http://localhost:5175',
     supportFile: 'cypress/support/e2e.js', // 显式指定支持文件
     setupNodeEvents(on, config) {
-      // 添加Node事件监听器
+      on('task', {
+        log(message) {
+          console.log(message)
+          return null
+        },
+      })
     }
   }
 })

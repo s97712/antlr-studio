@@ -19,6 +19,7 @@
     "@lezer/highlight": "^1.2.1",
     "@types/codemirror": "^5.60.16",
     "@types/d3": "^7.4.3",
+    "antlr4": "^4.13.2",
     "antlr4ng": "^3.0.16",
     "codemirror": "^6.0.2",
     "d3": "^7.9.0",

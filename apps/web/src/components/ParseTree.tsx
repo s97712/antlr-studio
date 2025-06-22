@@ -17,8 +17,15 @@ const ParseTree: React.FC<ParseTreeProps> = ({
   width = 800, 
   height = 600 
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.setAttribute('data-testid', 'parse-tree');
+    }
+  }, []);
   
   useEffect(() => {
     if (!data || !svgRef.current) return;

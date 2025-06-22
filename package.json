@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"cd apps/web && npm run dev\" \"netlify dev\""
+    "dev": "concurrently \"pnpm run dev:web\" \"pnpm run dev:api\"",
+    "dev:web": "cd apps/web && pnpm run dev",
+    "dev:api": "netlify dev"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +20,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "antlr4": "^4.13.2",
     "antlr4ng": "^3.0.16",
     "node-fetch": "^3.3.2"
   }
