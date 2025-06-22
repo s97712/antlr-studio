@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import './App.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import EditorPanel from './components/EditorPanel';
-import ParseTree from './components/ParseTree';
+import ParseTree from './grammar/components/ParseTree';
 
-import { parseInput } from './utils/parser';
-import { convertTree } from './utils/treeConverter';
+import { parseInput } from './grammar/parser/parser';
+import { convertTree } from './grammar/parser/treeConverter';
 import { EXAMPLE_GRAMMAR, EXAMPLE_INPUT } from './constants';
 
 const App: React.FC = () => {

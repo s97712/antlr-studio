@@ -4,7 +4,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
 import { syntaxHighlighting } from '@codemirror/language';
-import { antlrGrammarSyntax } from '@/components/antlrSyntax';
+import { antlrGrammarSyntax } from '@/grammar/components/antlrSyntax';
 import { ViewUpdate } from '@codemirror/view';
 
 interface EditorPanelProps {
