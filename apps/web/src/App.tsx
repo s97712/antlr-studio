@@ -17,7 +17,7 @@ const App: React.FC = () => {
 
   const [grammar, setGrammar] = useState<string>(exampleGrammar);
   const [input, setInput] = useState<string>(exampleInput);
-  const [visualTree, setVisualTree] = useState<any>(null); // 新增状态：可视化树
+  const [visualTree, setVisualTree] = useState<TreeNode | null>(null); // 新增状态：可视化树
   const [errors, setErrors] = useState<string[]>([]);
   const handleParse = async () => {
     if (!grammar.trim()) {
@@ -31,7 +31,7 @@ const App: React.FC = () => {
       const tree = await parseInput(grammar, input);
       
       // 转换解析树为可视化格式
-      const vt = convertTree(tree);
+      const vt = convertTree(tree.tree);
       setVisualTree(vt);
     } catch (error) {
       console.error('解析失败:', error);
@@ -80,7 +80,7 @@ const App: React.FC = () => {
         <Panel defaultSize={40} minSize={20}>
           <div className="visualization-container">
             <div className="toolbar">
-              <button onClick={handleParse}>解析</button>
+              <button onClick={handleParse} data-testid="parse-button">解析</button>
             </div>
             {errors.length > 0 && (
               <div className="error-panel">

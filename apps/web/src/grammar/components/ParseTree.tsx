@@ -1,10 +1,28 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import * as d3 from 'd3';
+import type { TreeNode } from '../parser/treeConverter';
 
-interface TreeNode {
-  name: string;
-  children?: TreeNode[];
-}
+// 将树结构转换为可读文本格式
+const treeToText = (node: TreeNode): string => {
+  const nodeText = (() => {
+    if (node.type === 'Terminal') {
+      return String(node.text || '');
+    } else if (node.type === 'Rule') {
+      return String(node.text || String(node.name) || '');
+    }
+    return String(node.originalText || String(node.name) || '');
+  })();
+  
+  let result = nodeText;
+  
+  if (node.children) {
+    for (const child of node.children) {
+      result += treeToText(child);
+    }
+  }
+  
+  return result;
+};
 
 interface ParseTreeProps {
   data: TreeNode | null;
@@ -12,21 +30,22 @@ interface ParseTreeProps {
   height?: number;
 }
 
-const ParseTree: React.FC<ParseTreeProps> = ({ 
-  data, 
-  width = 800, 
-  height = 600 
+const ParseTree: React.FC<ParseTreeProps> = ({
+  data,
+  width = 800,
+  height = 600
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
+  
 
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.setAttribute('data-testid', 'parse-tree');
     }
   }, []);
-  
+   
   useEffect(() => {
     if (!data || !svgRef.current) return;
     
@@ -55,7 +74,7 @@ const ParseTree: React.FC<ParseTreeProps> = ({
     
     // 创建连线生成器
     const linkGenerator = d3.linkHorizontal<
-      d3.HierarchyPointLink<TreeNode>, 
+      d3.HierarchyPointLink<TreeNode>,
       [number, number]
     >()
       .source(d => [d.source.x, d.source.y])
@@ -89,14 +108,23 @@ const ParseTree: React.FC<ParseTreeProps> = ({
       .attr('dy', '0.31em')
       .attr('x', d => d.children ? -8 : 8)
       .attr('text-anchor', d => d.children ? 'end' : 'start')
-      .text(d => d.data.name);
+      .text(d => d.data.originalText || d.data.name);
     
-  }, [data, width, height]);
+    // 从渲染树中提取文本并设置到 data-extracted-text 属性
+    if (containerRef.current && data) {
+      const extractedText = treeToText(data);
+      containerRef.current.setAttribute('data-extracted-text', extractedText);
+    }
 
+  }, [data, width, height]);
+  
+ 
   return (
-    <svg ref={svgRef} width={width} height={height}>
-      <g ref={gRef} />
-    </svg>
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <svg ref={svgRef} width={width} height={height}>
+        <g ref={gRef} />
+      </svg>
+    </div>
   );
 };
 
