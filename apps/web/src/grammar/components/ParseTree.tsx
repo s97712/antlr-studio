@@ -1,27 +1,21 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
 import type { TreeNode } from '../parser/treeConverter';
 
 // 将树结构转换为可读文本格式
 const treeToText = (node: TreeNode): string => {
-  const nodeText = (() => {
-    if (node.type === 'Terminal') {
-      return String(node.text || '');
-    } else if (node.type === 'Rule') {
-      return String(node.text || String(node.name) || '');
-    }
-    return String(node.originalText || String(node.name) || '');
-  })();
+  if (node.type === 'Terminal') {
+    return String(node.text || node.originalText || '');
+  }
   
-  let result = nodeText;
-  
+  let result = '';
   if (node.children) {
     for (const child of node.children) {
       result += treeToText(child);
     }
   }
   
-  return result;
+  return result.replace(/<EOF>/g, '');
 };
 
 interface ParseTreeProps {
@@ -38,6 +32,7 @@ const ParseTree: React.FC<ParseTreeProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
+  const [extractedText, setExtractedText] = useState<string>('');
   
 
   useEffect(() => {
@@ -99,6 +94,7 @@ const ParseTree: React.FC<ParseTreeProps> = ({
       .append('g')
       .attr('class', 'node')
       .attr('transform', d => `translate(${d.x},${d.y})`);
+    console.log('d.data in ParseTree:', nodes);
     
     node.append('circle')
       .attr('r', 5)
@@ -108,12 +104,12 @@ const ParseTree: React.FC<ParseTreeProps> = ({
       .attr('dy', '0.31em')
       .attr('x', d => d.children ? -8 : 8)
       .attr('text-anchor', d => d.children ? 'end' : 'start')
-      .text(d => d.data.originalText || d.data.name);
+      .text(d => d.data.text || d.data.originalText || d.data.name);
     
     // 从渲染树中提取文本并设置到 data-extracted-text 属性
     if (containerRef.current && data) {
-      const extractedText = treeToText(data);
-      containerRef.current.setAttribute('data-extracted-text', extractedText);
+      const text = treeToText(data);
+      setExtractedText(text);
     }
 
   }, [data, width, height]);
@@ -124,6 +120,11 @@ const ParseTree: React.FC<ParseTreeProps> = ({
       <svg ref={svgRef} width={width} height={height}>
         <g ref={gRef} />
       </svg>
+      {extractedText && (
+        <span data-testid="extracted-text-display" style={{ position: 'absolute', top: 0, left: 0, opacity: 0 }}>
+          {extractedText}
+        </span>
+      )}
     </div>
   );
 };
