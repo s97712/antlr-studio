@@ -20,4 +20,6 @@ export interface TreeNode {
   children?: TreeNode[];
   type?: 'Rule' | 'Terminal'; // 添加 type 属性
   text?: string; // 添加 text 属性
+  width?: number; // 添加 width 属性
+  height?: number; // 添加 height 属性
 }

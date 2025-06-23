@@ -3,6 +3,7 @@ import './App.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import EditorPanel from './components/EditorPanel';
 import ParseTree from './grammar/components/ParseTree';
+import D3ParseTree from './grammar/components/D3ParseTree';
 import type { TreeNode } from './grammar/parser/treeConverter';
 
 import { parseInput } from './grammar/parser/parser';
@@ -20,9 +21,8 @@ const App: React.FC = () => {
   const [input, setInput] = useState<string>(exampleInput);
   const [visualTree, setVisualTree] = useState<TreeNode | null>(null); // 新增状态：可视化树
   const [errors, setErrors] = useState<string[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(
-    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true); // 默认设置为暗色模式
+  const [renderer, setRenderer] = useState<'original' | 'd3'>('d3'); // 新增状态：控制渲染器
 
   useEffect(() => {
     document.body.classList.toggle('dark', isDarkMode);
@@ -98,6 +98,9 @@ const App: React.FC = () => {
               <button onClick={toggleDarkMode} style={{ marginLeft: '10px' }}>
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
               </button>
+              <button onClick={() => setRenderer(renderer === 'original' ? 'd3' : 'original')} style={{ marginLeft: '10px' }}>
+                切换到 {renderer === 'original' ? 'D3 树' : '原始树'}
+              </button>
             </div>
             {errors.length > 0 && (
               <div className="error-panel">
@@ -109,7 +112,15 @@ const App: React.FC = () => {
               </div>
             )}
             <div data-testid="parse-tree-container">
-              {visualTree ? <ParseTree data={visualTree} /> : <div>解析树加载中...</div>}
+              {visualTree ? (
+                renderer === 'original' ? (
+                  <ParseTree data={visualTree} />
+                ) : (
+                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />
+                )
+              ) : (
+                <div>解析树加载中...</div>
+              )}
             </div>
           </div>
         </Panel>

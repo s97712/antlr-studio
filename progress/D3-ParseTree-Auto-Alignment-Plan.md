@@ -86,12 +86,19 @@ graph TD
 
 **具体步骤：**
 
-1.  **数据准备**:
-    *   确保您的解析树数据结构是嵌套的，并且子节点存储在 `children` 属性中。
-    *   使用 `d3.hierarchy(rootNode)` 将原始数据转换为 D3.js 层次结构。
+1.  **第一步：创建空组件和切换功能 (验证通过后再进行后续实现)**
+    *   **创建 `D3ParseTree.tsx` 空组件**:
+        *   在 `apps/web/src/grammar/components/` 目录下创建一个新文件 `D3ParseTree.tsx`。
+        *   文件内容将是一个简单的 React 组件，它只渲染一个占位符，例如 `<div>D3 Parse Tree Placeholder</div>`。
+    *   **修改父组件以实现切换**:
+        *   识别 `ParseTree.tsx` 的父组件。根据文件列表，可能是 `apps/web/src/App.tsx` 或 `apps/web/src/components/EditorPanel.tsx`。
+        *   在该父组件中，导入 `D3ParseTree.tsx`。
+        *   引入一个 `useState` 钩子来管理当前选定的渲染器（例如，`const [renderer, setRenderer] = useState('original');`）。
+        *   添加一个 UI 元素（例如，一个 `<button>` 或 `<select>`），当用户点击或选择时，更新 `renderer` 状态。
+        *   使用条件渲染来根据 `renderer` 的值显示 `ParseTree` 或 `D3ParseTree` 组件，并将解析树数据作为 `props` 传递给它们。
+    *   **验证**: 运行应用程序，确保可以通过 UI 控件成功切换到 `D3ParseTree.tsx` 组件，并看到占位符内容。
 
-2.  **创建 `D3ParseTree.tsx` 组件**:
-    *   创建一个新文件 `apps/web/src/grammar/components/D3ParseTree.tsx`。
+2.  **第二步：实现 `D3ParseTree.tsx` 中的 D3.js 渲染逻辑**
     *   在这个组件中，导入 D3.js 库。
     *   使用 `useRef` 创建一个 SVG 容器的引用。
     *   使用 `useEffect` 钩子来执行 D3.js 渲染逻辑：
@@ -105,10 +112,3 @@ graph TD
         *   将节点和链接渲染到 SVG 容器中。
         *   添加缩放、平移等交互功能。
     *   在 `useEffect` 的清理函数中，移除 D3.js 创建的元素或事件监听器，以防止内存泄漏。
-
-3.  **修改父组件以实现切换**:
-    *   识别 `ParseTree.tsx` 的父组件。根据文件列表，可能是 `apps/web/src/App.tsx` 或 `apps/web/src/components/EditorPanel.tsx`。
-    *   在该父组件中，导入 `D3ParseTree.tsx`。
-    *   引入一个 `useState` 钩子来管理当前选定的渲染器（例如，`const [renderer, setRenderer] = useState('original');`）。
-    *   添加一个 UI 元素（例如，一个 `<button>` 或 `<select>`），当用户点击或选择时，更新 `renderer` 状态。
-    *   使用条件渲染来根据 `renderer` 的值显示 `ParseTree` 或 `D3ParseTree` 组件，并将解析树数据作为 `props` 传递给它们。如果渲染 `D3ParseTree`，还可以传递 `layoutType` prop 来选择矩形或径向布局。
