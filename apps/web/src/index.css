@@ -2,15 +2,24 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  color-scheme: light dark;
+}
+
+body:not(.dark) {
+  color: #213547;
+  background-color: #ffffff;
+}
+
+body.dark {
+  color: rgba(255, 255, 255, 0.9);
+  background-color: #1a1a1a;
 }
 
 a {
@@ -42,7 +51,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  /* background-color: #1a1a1a; */ /* 移除通用按钮背景色，由主题控制 */
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -54,15 +63,20 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+a:hover {
+  color: #535bf2;
+}
+
+body.dark button {
+  background-color: #1a1a1a; /* 暗色模式下按钮背景色 */
+  color: rgba(255, 255, 255, 0.9); /* 暗色模式下按钮文本颜色 */
+}
+
+body:not(.dark) a:hover {
+  color: #747bff;
+}
+
+body:not(.dark) button {
+  background-color: #d0d0d0;
+  color: #000; /* 确保文本颜色为黑色，提高对比度 */
 }

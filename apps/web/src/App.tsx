@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import EditorPanel from './components/EditorPanel';
 import ParseTree from './grammar/components/ParseTree';
+import type { TreeNode } from './grammar/parser/treeConverter';
 
 import { parseInput } from './grammar/parser/parser';
 import { convertTree } from './grammar/parser/treeConverter';
@@ -19,6 +20,17 @@ const App: React.FC = () => {
   const [input, setInput] = useState<string>(exampleInput);
   const [visualTree, setVisualTree] = useState<TreeNode | null>(null); // 新增状态：可视化树
   const [errors, setErrors] = useState<string[]>([]);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(
+    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+
+  useEffect(() => {
+    document.body.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(prevMode => !prevMode);
+  };
   const handleParse = async () => {
     if (!grammar.trim()) {
       setErrors(['请提供语法']);
@@ -54,6 +66,7 @@ const App: React.FC = () => {
                   value={grammar}
                   onChange={setGrammar}
                   language="antlr"
+                  isDarkMode={isDarkMode}
                 />
               </div>
             </Panel>
@@ -68,6 +81,7 @@ const App: React.FC = () => {
                   value={input}
                   onChange={setInput}
                   language="text"
+                  isDarkMode={isDarkMode}
                 />
               </div>
             </Panel>
@@ -81,6 +95,9 @@ const App: React.FC = () => {
           <div className="visualization-container">
             <div className="toolbar">
               <button onClick={handleParse} data-testid="parse-button">解析</button>
+              <button onClick={toggleDarkMode} style={{ marginLeft: '10px' }}>
+                切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
+              </button>
             </div>
             {errors.length > 0 && (
               <div className="error-panel">

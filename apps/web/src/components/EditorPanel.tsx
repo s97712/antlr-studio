@@ -6,19 +6,23 @@ import { indentWithTab } from '@codemirror/commands';
 import { syntaxHighlighting } from '@codemirror/language';
 import { antlrGrammarSyntax } from '@/grammar/components/antlrSyntax';
 import { ViewUpdate } from '@codemirror/view';
+import { oneDark } from '@codemirror/theme-one-dark'; // 导入暗色主题
+import { EditorView as EditorViewTheme } from '@codemirror/view'; // 导入亮色主题
 
 interface EditorPanelProps {
   value: string;
   onChange: (value: string) => void;
   language?: 'antlr' | 'text';
   readOnly?: boolean;
+  isDarkMode: boolean; // 新增属性：是否为暗色模式
 }
 
-const EditorPanel: React.FC<EditorPanelProps> = ({ 
-  value, 
+const EditorPanel: React.FC<EditorPanelProps> = ({
+  value,
   onChange,
   language = 'antlr',
-  readOnly = false
+  readOnly = false,
+  isDarkMode // 接收 isDarkMode 属性
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
@@ -40,7 +44,8 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
           }
         }),
         EditorState.readOnly.of(readOnly),
-        EditorView.editable.of(!readOnly)
+        EditorView.editable.of(!readOnly),
+        isDarkMode ? oneDark : EditorViewTheme.theme({}), // 根据 isDarkMode 应用主题
       ]
     });
 
@@ -55,7 +60,7 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
       view.destroy();
       editorViewRef.current = null;
     };
-  }, [language, readOnly, value, onChange]);
+  }, [language, readOnly, isDarkMode]); // 将 isDarkMode 添加到依赖项
 
   useEffect(() => {
     if (editorViewRef.current && editorViewRef.current.state.doc.toString() !== value) {

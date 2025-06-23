@@ -52,7 +52,7 @@ const ParseTree: React.FC<ParseTreeProps> = ({
     
     // 创建树布局
     const treeLayout = d3.tree<TreeNode>()
-      .size([height, width - 200]);
+      .nodeSize([40, 100]); // 调整节点间距
     
     // 创建层次数据
     const root = d3.hierarchy(data);
@@ -98,7 +98,7 @@ const ParseTree: React.FC<ParseTreeProps> = ({
     
     node.append('circle')
       .attr('r', 5)
-      .attr('fill', '#999');
+      .attr('fill', '#333');
     
     node.append('text')
       .attr('dy', '0.31em')
