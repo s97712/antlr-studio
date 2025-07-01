@@ -12,12 +12,13 @@ interface D3ParseTreeProps {
 const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const gRef = useRef<SVGGElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  // const width = 800;
+  // const height = 600;
 
   // 1. Initialization Effect (runs only once)
   useEffect(() => {
-    if (!svgRef.current || !containerRef.current) return;
+    if (!svgRef.current) return;
 
     const svg = d3.select(svgRef.current);
     gRef.current = svg.append('g').node();
@@ -32,15 +33,7 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode }) => {
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    const resizeObserver = new ResizeObserver(entries => {
-      if (!entries || entries.length === 0) return;
-      const { width, height } = entries[0].contentRect;
-      svg.attr('width', width).attr('height', height);
-    });
-
-    resizeObserver.observe(containerRef.current);
     return () => {
-      resizeObserver.disconnect();
       // Clean up D3 elements to prevent memory leaks
       if (gRef.current) {
         d3.select(gRef.current).selectAll('*').remove();
@@ -53,7 +46,7 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode }) => {
 
   // 2. Data Update Effect
   useEffect(() => {
-    if (!data || !gRef.current || !containerRef.current || !svgRef.current || !zoomRef.current) return;
+    if (!data || !gRef.current || !svgRef.current || !zoomRef.current) return;
 
     const g = d3.select(gRef.current);
     g.selectAll('*').remove(); // Clear previous drawing
@@ -126,7 +119,7 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode }) => {
     node.selectAll('text').attr('fill', isDarkMode ? '#E2E8F0' : '#2D3748');
 
     // --- Center the tree ---
-    const { width, height } = containerRef.current.getBoundingClientRect();
+    const { width, height } = svgRef.current.getBoundingClientRect();
     const bounds = g.node()?.getBBox();
     if (bounds) {
       const fullWidth = bounds.width;
@@ -160,10 +153,11 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode }) => {
   }, [isDarkMode]);
 
   return (
-    <div ref={containerRef} style={{ overflow: 'hidden', width: '100%', height: '100%', background: isDarkMode ? '#1A202C' : '#FFFFFF' }}>
-      <svg ref={svgRef}></svg>
+    <div style={{ width: '100%', height: '100%', background: isDarkMode ? '#1A202C' : '#FFFFFF' }}>
+      <svg ref={svgRef} style={{ width: "100%", height: "100%" }}></svg>
     </div>
   );
 };
 
 export default D3ParseTree;
+

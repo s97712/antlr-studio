@@ -111,7 +111,7 @@ const App: React.FC = () => {
                 ))}
               </div>
             )}
-            <div data-testid="parse-tree-container">
+            <div data-testid="parse-tree-container" style={{ flex: 1, height: 0 }} >
               {visualTree ? (
                 renderer === 'original' ? (
                   <ParseTree data={visualTree} />
