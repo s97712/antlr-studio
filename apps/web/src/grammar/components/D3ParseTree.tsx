@@ -101,6 +101,7 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode, initialFocu
       .enter().append('g')
       .attr('class', 'node')
       .attr('transform', d => `translate(${d.x},${d.y})`)
+      .style('cursor', 'pointer') // Add cursor style
       // --- Node Focus and Zoom Feature ---
       .on('click', (event, d) => {
         const svg = d3.select(svgRef.current);

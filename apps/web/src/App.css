@@ -26,6 +26,14 @@ div[data-panel-group-direction="horizontal"] > .resize-handle {
   padding: 0; /* 去除多余边距 */
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-container h3 {
+  text-align: center;
+  margin: 4px 0;
+  flex-shrink: 0;
 }
 
 .editor-panel {
@@ -43,9 +51,11 @@ div[data-panel-group-direction="horizontal"] > .resize-handle {
 }
 
 .toolbar {
-  padding: 10px; /* 保留toolbar的边距 */
+  padding: 4px 10px; /* 保留toolbar的边距 */
   background-color: #e0e0e0;
   border-bottom: 1px solid #ccc;
+  display: flex;
+  gap: 5px;
 }
 
 /* 树形图样式 */

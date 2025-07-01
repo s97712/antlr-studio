@@ -134,7 +134,7 @@ const App: React.FC = () => {
         <Panel defaultSize={60} minSize={30}>
           <PanelGroup direction="horizontal">
             {/* 语法编辑器 */}
-            <Panel defaultSize={50} minSize={20}>
+            <Panel defaultSize={33.3} minSize={20}>
                <PanelGroup direction="horizontal">
                 <Panel defaultSize={50} minSize={20}>
                   <div className="editor-container">
@@ -147,8 +147,11 @@ const App: React.FC = () => {
                     />
                   </div>
                 </Panel>
-                <PanelResizeHandle className="resize-handle" />
-                <Panel defaultSize={50} minSize={20}>
+              </PanelGroup>
+            </Panel>
+            
+            <PanelResizeHandle className="resize-handle" />
+            <Panel defaultSize={33.3} minSize={20}>
                   <div className="editor-container">
                     <h3>Parser Grammar</h3>
                     <EditorPanel
@@ -159,15 +162,12 @@ const App: React.FC = () => {
                     />
                   </div>
                 </Panel>
-              </PanelGroup>
-            </Panel>
-            
             <PanelResizeHandle className="resize-handle" />
             
             {/* 输入文本编辑器 */}
-            <Panel defaultSize={50} minSize={20}>
+            <Panel defaultSize={33.3} minSize={20}>
               <div className="editor-container">
-                <h3>输入文本</h3>
+                <h3>Input Text</h3>
                 <EditorPanel
                   value={input}
                   onChange={setInput}
@@ -193,17 +193,16 @@ const App: React.FC = () => {
                     loadGrammarContents(selected);
                   }
                 }}
-                style={{ marginRight: '10px' }}
               >
                 {grammarsList.map(g => (
                   <option key={g.name} value={g.name}>{g.name}</option>
                 ))}
               </select>
               <button onClick={handleParse} data-testid="parse-button">解析</button>
-              <button onClick={toggleDarkMode} style={{ marginLeft: '10px' }}>
+              <button onClick={toggleDarkMode}>
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
               </button>
-              <button onClick={() => setRenderer(renderer === 'original' ? 'd3' : 'original')} style={{ marginLeft: '10px' }}>
+              <button onClick={() => setRenderer(renderer === 'original' ? 'd3' : 'original')}>
                 切换到 {renderer === 'original' ? 'D3 树' : '原始树'}
               </button>
             </div>
