@@ -8,4 +8,4 @@ expr: expr ('*'|'/') expr
 INT: [0-9]+;
 WS: [ \\t\\r\\n]+ -> skip;`;
 
-export const EXAMPLE_INPUT = '1+2*3';
+export const EXAMPLE_INPUT = '154545+2456465456*345645645645';
