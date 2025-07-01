@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [parserGrammar, setParserGrammar] = useState<string>('');
   const [input, setInput] = useState<string>('');
   const [visualTree, setVisualTree] = useState<TreeNode | null>(null);
+  const [initialFocusNode, setInitialFocusNode] = useState<TreeNode | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [renderer, setRenderer] = useState<'original' | 'd3'>('d3');
@@ -89,6 +90,7 @@ const App: React.FC = () => {
       return;
     }
     setVisualTree(null);
+    setInitialFocusNode(null); // Reset focus node on each parse
     setErrors([]);
     
     try {
@@ -117,6 +119,7 @@ const App: React.FC = () => {
       
       const vt = convertTree(tree.tree);
       setVisualTree(vt);
+      setInitialFocusNode(vt); // Set the root of the new tree as the initial focus
     } catch (error) {
       console.error('解析失败:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -218,7 +221,7 @@ const App: React.FC = () => {
                 renderer === 'original' ? (
                   <ParseTree data={visualTree} />
                 ) : (
-                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />
+                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} initialFocusNode={initialFocusNode} />
                 )
               ) : (
                 <div>解析树加载中...</div>

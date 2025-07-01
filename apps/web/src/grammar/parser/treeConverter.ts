@@ -1,17 +1,37 @@
 export const convertTree = (node: any): TreeNode | null => {
   if (!node) return null;
 
-  // 获取原始文本内容（如果有）
-  const originalText = node.getText?.() || '';
-  
-  console.log('Node received by convertTree:', node);
+  // For terminal nodes (tokens)
+  if (node.symbol) {
+    let text = node.getText();
+    if (text === '<EOF>') {
+      text = 'EOF';
+    }
+    return {
+      name: text,
+      originalText: text,
+      type: 'Terminal',
+      render: text,
+      text: text,
+      children: [],
+      width: 0,
+      height: 0,
+    };
+  }
+
+  // For rule nodes
+  const ruleName = node.constructor.name.replace('Context', '');
+
+  // Filter out null children, which can happen with optional rules or error nodes.
+  const children = node.children?.map(convertTree).filter((c: TreeNode | null): c is TreeNode => c !== null) || [];
+
   return {
-    name: (node.getText?.() && node.getText() !== '') ? node.getText() : (node.symbol?.text || node.constructor.name.replace('Context', '')),
-    originalText: originalText,
-    type: node.type, // 映射 type 属性
-    text: node.text, // 映射 text 属性
-    children: node.children?.map(convertTree) || [],
-    render: node.text || "<null>",
+    name: ruleName,
+    originalText: node.getText?.() || '',
+    type: 'Rule',
+    render: ruleName,
+    text: node.getText?.() || '',
+    children: children,
     width: 0,
     height: 0,
   };

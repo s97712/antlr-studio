@@ -98,49 +98,11 @@ export async function parseInput(
   parseTree = parser[startRuleName]();
 
   // 4. 将解析结果转换为JSON格式
-  parseTree = convertParseTreeToJson(parseTree, parser.ruleNames);
+  // The conversion to a simplified JSON format is no longer needed here.
+  // The raw ANTLR tree will be passed directly to the frontend,
+  // where treeConverter.ts will handle the conversion to the visual TreeNode format.
 
   return { tree: parseTree, errors };
 }
 
-// 辅助函数：将ANTLR解析树转换为JSON对象
-function convertParseTreeToJson(node: any, ruleNames: string[]): any {
-  if (!node) {
-    return null;
-  }
-
-  const children = [];
-  if (node.children) {
-    for (const child of node.children) {
-      if (child.ruleIndex !== undefined) {
-        children.push(convertParseTreeToJson(child, ruleNames));
-      } else if (child.symbol) {
-        children.push({
-          type: 'Terminal',
-          text: child.symbol.text,
-          tokenType: child.symbol.type,
-          line: child.symbol.line,
-          column: child.symbol.column,
-        });
-      }
-    }
-  }
-
-  if (node.ruleIndex !== undefined) {
-    return {
-      type: 'Rule',
-      name: ruleNames[node.ruleIndex],
-      text: node.getText(),
-      children: children.length > 0 ? children : undefined,
-    };
-  } else if (node.symbol) {
-    return {
-      type: 'Terminal',
-      text: node.symbol.text,
-      tokenType: node.symbol.type,
-      line: node.symbol.line,
-      column: node.symbol.column,
-    };
-  }
-  return null;
-}
+// The convertParseTreeToJson function is no longer needed and has been removed.
