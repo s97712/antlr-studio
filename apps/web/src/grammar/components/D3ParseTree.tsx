@@ -49,6 +49,8 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode, initialFocu
   const hasFocusedRef = useRef(false);
 
   useEffect(() => {
+    // Reset the focus flag whenever new data arrives
+    hasFocusedRef.current = false;
     if (!data || !gRef.current || !svgRef.current || !zoomRef.current) return;
 
     const g = d3.select(gRef.current);
@@ -113,7 +115,7 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode, initialFocu
           .translate(-d.x, -d.y);
 
         g.transition()
-          .duration(750)
+          .duration(300)
           .attr('transform', newTransform.toString());
       });
       // --- End of Node Focus and Zoom Feature ---
@@ -162,7 +164,7 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode, initialFocu
           
           const svg = d3.select(svgRef.current);
           svg.transition()
-             .duration(750)
+             .duration(300)
              .call(zoomRef.current.transform, newTransform);
           
           hasFocusedRef.current = true;
