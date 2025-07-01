@@ -6,20 +6,32 @@ import path from 'path';
 export const handler: Handler = async (event) => {
   // 解析请求体
   const body = JSON.parse(event.body || '{}');
-  const { grammar, language = 'JavaScript', grammarName = 'Grammar' } = body;
-  
-  if (!grammar) {
+  const { grammars, mainGrammar, language = 'JavaScript' } = body;
+
+  if (!grammars || !Array.isArray(grammars) || grammars.length === 0) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'Missing grammar in request body' })
+      body: JSON.stringify({ error: 'Missing grammars array in request body' })
+    };
+  }
+
+  if (!mainGrammar) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Missing mainGrammar in request body' })
     };
   }
 
   // 创建临时目录
   const tempDir = fs.mkdtempSync('antlr-compile-');
-  const grammarPath = path.join(tempDir, `${grammarName}.g4`);
   
   try {
+    // 写入所有语法文件
+    grammars.forEach(g => {
+      const filePath = path.join(tempDir, g.name);
+      fs.writeFileSync(filePath, g.content);
+    });
+
     // 确保输出目录存在
     const outputDir = path.join(tempDir, 'output');
     if (!fs.existsSync(outputDir)) {
@@ -29,9 +41,6 @@ export const handler: Handler = async (event) => {
     // 初始化outputFiles对象
     const outputFiles: Record<string, string> = {};
     
-    // 写入语法文件
-    fs.writeFileSync(grammarPath, grammar);
-    
     // 获取JAR文件路径
     const jarPath = path.join(__dirname, 'antlr-4.13.1-complete.jar');
     if (!fs.existsSync(jarPath)) {
@@ -39,11 +48,13 @@ export const handler: Handler = async (event) => {
     }
     
     // 执行编译命令
+    const grammarFileNames = grammars.map(g => g.name).join(' ');
     console.log('开始执行ANTLR编译...');
     const compileResult = execSync(
-      `java -jar "${jarPath}" -Dlanguage=${language} -Dts=false -Dmodule=ES6 -o ${outputDir} ${grammarPath}`,
+      `java -jar "${jarPath}" -Dlanguage=${language} -o output ${grammarFileNames}`,
       {
         timeout: 30000,
+        cwd: tempDir, // 在临时目录内执行
         // stdio: "inherit"
       }
     );
@@ -85,7 +96,7 @@ export const handler: Handler = async (event) => {
     
     // 将输出文件对象转换为数组格式
     const outputArray = Object.entries(generatedFiles).map(([fileName, content]) => ({
-      fileName: fileName,
+      name: fileName,
       content: content
     }));
     
@@ -95,7 +106,7 @@ export const handler: Handler = async (event) => {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify(outputArray)
+      body: JSON.stringify({ files: outputArray })
     };
   } catch (error) {
     console.error('Compilation failed:', error);
