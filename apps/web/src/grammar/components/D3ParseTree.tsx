@@ -1,113 +1,166 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { flextree } from 'd3-flextree';
+import type { FlextreeNode } from 'd3-flextree';
 import type { TreeNode } from '../parser/treeConverter';
 
 interface D3ParseTreeProps {
   data: TreeNode;
-  isDarkMode: boolean; // 新增属性：是否为暗色模式
+  isDarkMode: boolean;
 }
 
 const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const gRef = useRef<SVGGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
+  // 1. Initialization Effect (runs only once)
   useEffect(() => {
-    if (!data || !svgRef.current || !containerRef.current) return;
+    if (!svgRef.current || !containerRef.current) return;
 
-    const svgElement = d3.select(svgRef.current);
-    svgElement.selectAll('*').remove(); // Clean up on initial setup
-
-    const g = svgElement.append('g');
+    const svg = d3.select(svgRef.current);
+    gRef.current = svg.append('g').node();
+    const g = d3.select(gRef.current);
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 10])
+      .scaleExtent([0.1, 8])
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
       });
 
-    svgElement.call(zoom);
+    svg.call(zoom);
+    zoomRef.current = zoom;
 
-    const drawChartContent = () => {
-      // This function only draws/updates the tree elements.
-      g.selectAll('*').remove();
-
-      const treeLayout = flextree<TreeNode>({})
-        .nodeSize(d => [d.data.width || 0, d.data.height || 0]);
-
-      const root = d3.hierarchy(data);
-      const nodes = treeLayout(root).descendants();
-      const links = root.links();
-
-      g.selectAll('.link')
-        .data(links)
-        .enter().append('path')
-        .attr('class', 'link')
-        .attr('fill', 'none')
-        .attr('stroke', '#ccc')
-        .attr('stroke-width', 1.5)
-        .attr('d', d3.linkVertical<d3.HierarchyLink<TreeNode>, d3.HierarchyPointNode<TreeNode>>()
-          .x(d => d.x)
-          .y(d => d.y));
-
-      const node = g.selectAll('.node')
-        .data(nodes)
-        .enter().append('g')
-        .attr('class', 'node')
-        .attr('transform', d => `translate(${d.x},${d.y})`);
-
-      const text = node.append('text')
-        .attr('fill', () => isDarkMode ? '#E0E0E0' : '#333333')
-        .attr('text-anchor', 'middle')
-        .attr('dy', '0.35em')
-        .style('font-weight', 'bold')
-        .text(d => d.data.text || d.data.name);
-
-      text.each(function(d) {
-        const bbox = this.getBBox();
-        d.data.width = bbox.width + 10;
-        d.data.height = bbox.height + 10;
-      });
-
-      node.insert('rect', 'text')
-        .attr('x', d => -(d.data.width || 0) / 2)
-        .attr('y', d => -(d.data.height || 0) / 2)
-        .attr('width', d => d.data.width || 0)
-        .attr('height', d => d.data.height || 0)
-        .attr('fill', () => isDarkMode ? '#555555' : '#F0F0F0')
-        .attr('stroke', () => isDarkMode ? '#88CCFF' : '#666666')
-        .attr('stroke-width', 1.5)
-        .attr('rx', 5)
-        .attr('ry', 5);
-
-      text.attr('x', 0).attr('y', 0);
-    };
-
-    // Initial Draw and Centering
-    const { width, height } = containerRef.current.getBoundingClientRect();
-    svgElement.attr('width', width).attr('height', height);
-    drawChartContent();
-    const margin = { top: 20, right: 90, bottom: 30, left: 90 };
-    const initialTransform = d3.zoomIdentity.translate(width / 2, margin.top);
-    svgElement.call(zoom.transform, initialTransform);
-
-    // Resize Handling
     const resizeObserver = new ResizeObserver(entries => {
       if (!entries || entries.length === 0) return;
       const { width, height } = entries[0].contentRect;
-      svgElement.attr('width', width).attr('height', height);
-      // On resize, we only redraw the content. We DO NOT reset the zoom transform.
-      drawChartContent();
+      svg.attr('width', width).attr('height', height);
     });
 
     resizeObserver.observe(containerRef.current);
+    return () => {
+      resizeObserver.disconnect();
+      // Clean up D3 elements to prevent memory leaks
+      if (gRef.current) {
+        d3.select(gRef.current).selectAll('*').remove();
+      }
+      if (svgRef.current) {
+        d3.select(svgRef.current).on('.zoom', null);
+      }
+    };
+  }, []);
 
-    return () => resizeObserver.disconnect();
-  }, [data, isDarkMode]);
+  // 2. Data Update Effect
+  useEffect(() => {
+    if (!data || !gRef.current || !containerRef.current || !svgRef.current || !zoomRef.current) return;
 
+    const g = d3.select(gRef.current);
+    g.selectAll('*').remove(); // Clear previous drawing
+
+    // --- Create text elements to measure them ---
+    const tempTextGroup = g.append('g').attr('class', 'temp-texts').style('opacity', 0);
+    const hierarchy = d3.hierarchy(data);
+    hierarchy.each(d => {
+        const textNode = tempTextGroup.append('text')
+            .text((d.data.render))
+            .style('font-weight', 'bold')
+            .style('font-size', '12px')
+            .node();
+            
+        if (textNode) {
+          const bbox = textNode.getBBox();
+          d.data.width = bbox.width + 10;
+          d.data.height = bbox.height + 10;
+        }
+    });
+    tempTextGroup.remove(); // Clean up temporary elements
+
+    // --- Use flextree for layout ---
+    const treeLayout = flextree<TreeNode>({
+      nodeSize: node => [node.data.width, node.data.height + 20],
+      spacing: 10,
+    });
+    
+    const root = treeLayout(hierarchy);
+    const nodes = root.descendants();
+    const links = root.links();
+
+    // --- Draw links ---
+    g.selectAll('.link')
+      .data(links)
+      .enter().append('path')
+      .attr('class', 'link')
+      .attr('fill', 'none')
+      .attr('d', d3.linkVertical<d3.HierarchyLink<TreeNode>, FlextreeNode<TreeNode>>()
+          .x(d => d.x)
+          .y(d => d.y)
+      );
+
+    // --- Draw nodes ---
+    const node = g.selectAll('.node')
+      .data(nodes)
+      .enter().append('g')
+      .attr('class', 'node')
+      .attr('transform', d => `translate(${d.x},${d.y})`);
+
+    node.append('rect')
+      .attr('x', d => -(d.data.width) / 2)
+      .attr('y', d => -(d.data.height) / 2)
+      .attr('width', d => d.data.width)
+      .attr('height', d => d.data.height)
+      .attr('rx', 5)
+      .attr('ry', 5);
+
+    node.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .style('font-weight', 'bold')
+      .style('font-size', '12px')
+      .text(d => (d.data.render));
+
+    // --- Apply colors based on theme ---
+    g.selectAll('.link').attr('stroke', isDarkMode ? '#4A5568' : '#CBD5E0');
+    node.selectAll('rect').attr('fill', isDarkMode ? '#2D3748' : '#F7FAFC')
+        .attr('stroke', isDarkMode ? '#4A5568' : '#E2E8F0');
+    node.selectAll('text').attr('fill', isDarkMode ? '#E2E8F0' : '#2D3748');
+
+    // --- Center the tree ---
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    const bounds = g.node()?.getBBox();
+    if (bounds) {
+      const fullWidth = bounds.width;
+      const fullHeight = bounds.height;
+      const scale = Math.min(1, Math.min(width / fullWidth, height / fullHeight) * 0.9);
+      const initialTransform = d3.zoomIdentity
+        .translate(width / 2 - (bounds.x + fullWidth / 2) * scale, height / 2 - (bounds.y + fullHeight / 2) * scale)
+        .scale(scale);
+      
+      const svg = d3.select(svgRef.current);
+      svg.call(zoomRef.current.transform, initialTransform);
+    }
+  }, [data]);
+
+  // 3. Theme Update Effect
+  useEffect(() => {
+    if (!gRef.current) return;
+    const g = d3.select(gRef.current);
+
+    // Only update colors, no re-layout
+    g.selectAll('.link')
+      .attr('stroke', isDarkMode ? '#4A5568' : '#CBD5E0');
+      
+    g.selectAll('.node rect')
+      .attr('fill', isDarkMode ? '#2D3748' : '#F7FAFC')
+      .attr('stroke', isDarkMode ? '#4A5568' : '#E2E8F0');
+      
+    g.selectAll('.node text')
+      .attr('fill', isDarkMode ? '#E2E8F0' : '#2D3748');
+
+  }, [isDarkMode]);
 
   return (
-    <div ref={containerRef} style={{ overflow: 'auto', width: '100%', height: '100%' }}>
+    <div ref={containerRef} style={{ overflow: 'hidden', width: '100%', height: '100%', background: isDarkMode ? '#1A202C' : '#FFFFFF' }}>
       <svg ref={svgRef}></svg>
     </div>
   );

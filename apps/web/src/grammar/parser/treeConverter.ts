@@ -10,7 +10,10 @@ export const convertTree = (node: any): TreeNode | null => {
     originalText: originalText,
     type: node.type, // 映射 type 属性
     text: node.text, // 映射 text 属性
-    children: node.children?.map(convertTree) || []
+    children: node.children?.map(convertTree) || [],
+    render: node.text || "<null>",
+    width: 0,
+    height: 0,
   };
 };
 
@@ -19,7 +22,8 @@ export interface TreeNode {
   originalText?: string;
   children?: TreeNode[];
   type?: 'Rule' | 'Terminal'; // 添加 type 属性
+  render: string;
   text?: string; // 添加 text 属性
-  width?: number; // 添加 width 属性
-  height?: number; // 添加 height 属性
+  width: number; // 添加 width 属性
+  height: number; // 添加 height 属性
 }

@@ -9,7 +9,7 @@
 
 ## 启动项目
 
-请确保您已安装 [pnpm](https://pnpm.io/)。
+请确保您已安装 [pnpm](https://pnpm.io/) 和 [Netlify CLI](https://docs.netlify.com/cli/get-started/)。
 
 ### 1. 安装依赖
 
@@ -19,35 +19,50 @@
 pnpm install
 ```
 
-### 2. 启动前端应用
-
-进入 `apps/web` 目录并启动开发服务器：
-
-```bash
-cd apps/web
-pnpm dev
-```
-
-前端应用将在 `http://localhost:5173` 启动。
-
-### 3. 启动Netlify Functions模拟器 (可选，用于本地开发)
-
-如果您需要本地测试Netlify Functions，请确保已安装 [Netlify CLI](https://docs.netlify.com/cli/get-started/)。
+### 2. 启动开发环境
 
 在项目根目录执行：
 
 ```bash
-netlify dev
+pnpm run dev
 ```
 
-这将启动一个本地服务器，模拟Netlify环境，并使前端应用能够调用本地的Netlify函数。
+此命令将同时启动前端应用和Netlify Functions模拟器。
+- 前端应用将在 `http://localhost:5175` 启动。
+- Netlify Functions将在 `http://localhost:8888` 运行，供前端调用。
 
-### 4. 运行端到端测试 (待实现)
+### 4. 运行端到端测试
 
-```bash
-# 待添加Cypress测试命令
-```
+本项目使用Cypress进行端到端测试。请在 `apps/web` 目录下执行测试命令。
+
+- **运行Cypress (命令行模式):**
+  ```bash
+  cd apps/web
+  pnpm test:e2e
+  ```
+
+- **打开Cypress (交互模式):**
+  ```bash
+  cd apps/web
+  pnpm test:e2e:open
+  ```
+
+**重要提示:** 当测试环境（例如由AI助手使用的Playwright工具）在Docker容器中运行时，必须使用 `http://host.docker.internal:5175` 作为基础URL来访问前端应用，而不是 `localhost`。
 
 ## 贡献
 
 欢迎贡献！请参阅 `CONTRIBUTING.md` (如果存在) 获取更多信息。
+
+### 单独启动服务 (用于调试)
+
+如果需要单独启动前端或后端服务进行调试，可以在项目根目录使用以下命令：
+
+- **仅启动前端应用:**
+  ```bash
+  pnpm run dev:web
+  ```
+
+- **仅启动Netlify Functions模拟器:**
+  ```bash
+  pnpm run dev:api
+  ```

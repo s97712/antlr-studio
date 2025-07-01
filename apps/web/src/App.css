@@ -56,18 +56,7 @@ div[data-panel-group-direction="horizontal"] > .resize-handle {
   stroke-width: 1.5px;
 }
 
-.node circle {
-  fill: #555;
-}
 
-.node text {
-  font: 10px sans-serif;
-  fill: #000; /* 确保文本颜色为黑色，提高对比度 */
-}
-
-h3 {
-  margin: 0; /* 去除标题的默认边距 */
-}
 
 /* 暗色模式下的样式覆盖 */
 body.dark .resize-handle {
