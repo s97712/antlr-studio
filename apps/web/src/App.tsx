@@ -8,21 +8,72 @@ import type { TreeNode } from './grammar/parser/treeConverter';
 
 import { parseInput } from './grammar/parser/parser';
 import { convertTree } from './grammar/parser/treeConverter';
-import { EXAMPLE_GRAMMAR, EXAMPLE_INPUT } from './constants';
+
+interface GrammarInfo {
+  name: string;
+  lexer?: string;
+  parser: string;
+  input?: string;
+  startRule?: string;
+  mainGrammar?: string;
+}
 
 const App: React.FC = () => {
-  // 示例语法（简单算术表达式）
-  const exampleGrammar = EXAMPLE_GRAMMAR;
-
-  // 示例输入文本
-  const exampleInput = EXAMPLE_INPUT;
-
-  const [grammar, setGrammar] = useState<string>(exampleGrammar);
-  const [input, setInput] = useState<string>(exampleInput);
-  const [visualTree, setVisualTree] = useState<TreeNode | null>(null); // 新增状态：可视化树
+  const [lexerGrammar, setLexerGrammar] = useState<string>('');
+  const [parserGrammar, setParserGrammar] = useState<string>('');
+  const [input, setInput] = useState<string>('');
+  const [visualTree, setVisualTree] = useState<TreeNode | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true); // 默认设置为暗色模式
-  const [renderer, setRenderer] = useState<'original' | 'd3'>('d3'); // 新增状态：控制渲染器
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [renderer, setRenderer] = useState<'original' | 'd3'>('d3');
+  const [grammarsList, setGrammarsList] = useState<GrammarInfo[]>([]);
+  const [selectedGrammar, setSelectedGrammar] = useState<string>('');
+
+  const loadGrammarContents = async (grammarInfo: GrammarInfo) => {
+    try {
+      const { name, lexer, parser, input } = grammarInfo;
+      const basePath = `/pre-filled-grammars/`;
+
+      const fetchPromises = [
+        parser ? fetch(`${basePath}${parser}`).then(res => res.text()) : Promise.resolve(''),
+        lexer ? fetch(`${basePath}${lexer}`).then(res => res.text()) : Promise.resolve(''),
+        input ? fetch(`${basePath}${input}`).then(res => res.text()) : Promise.resolve('')
+      ];
+      
+      const [parserContent, lexerContent, inputContent] = await Promise.all(fetchPromises);
+      
+      setParserGrammar(parserContent);
+      setLexerGrammar(lexerContent);
+      setInput(inputContent);
+      setSelectedGrammar(name);
+      setVisualTree(null);
+      setErrors([]);
+    } catch (error) {
+      console.error("加载预置语法失败:", error);
+      setErrors([`加载预置语法 '${grammarInfo.name}' 失败`]);
+    }
+  };
+
+  useEffect(() => {
+    const fetchGrammarIndex = async () => {
+      try {
+        const response = await fetch('/pre-filled-grammars/index.json');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: GrammarInfo[] = await response.json();
+        setGrammarsList(data);
+        if (data.length > 0) {
+          setSelectedGrammar(data[0].name);
+          loadGrammarContents(data[0]);
+        }
+      } catch (error) {
+        console.error("获取语法索引失败:", error);
+        setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
+      }
+    };
+    fetchGrammarIndex();
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle('dark', isDarkMode);
@@ -31,18 +82,39 @@ const App: React.FC = () => {
   const toggleDarkMode = () => {
     setIsDarkMode(prevMode => !prevMode);
   };
+
   const handleParse = async () => {
-    if (!grammar.trim()) {
-      setErrors(['请提供语法']);
+    if (!parserGrammar.trim()) {
+      setErrors(['Parser 语法不能为空']);
       return;
     }
-    setVisualTree(null); // 重置可视化树
-    setErrors([]); // 清空错误
+    setVisualTree(null);
+    setErrors([]);
     
     try {
-      const tree = await parseInput(grammar, input);
+      const selectedGrammarInfo = grammarsList.find(g => g.name === selectedGrammar);
+      if (!selectedGrammarInfo) {
+        setErrors(['未找到选定的语法信息']);
+        return;
+      }
+
+      if (!selectedGrammarInfo.startRule) {
+        setErrors([`语法 "${selectedGrammarInfo.name}" 未定义入口规则 (startRule)。`]);
+        return;
+      }
+
+      const grammars = [{ fileName: selectedGrammarInfo.parser.split('/').pop()!, content: parserGrammar }];
+      if (lexerGrammar.trim() && selectedGrammarInfo.lexer) {
+          grammars.push({ fileName: selectedGrammarInfo.lexer.split('/').pop()!, content: lexerGrammar });
+      }
+
+      if (!selectedGrammarInfo.mainGrammar) {
+        setErrors([`语法 "${selectedGrammarInfo.name}" 未定义主语法文件 (mainGrammar)。`]);
+        return;
+      }
+
+      const tree = await parseInput(grammars, input, selectedGrammarInfo.mainGrammar, selectedGrammarInfo.startRule);
       
-      // 转换解析树为可视化格式
       const vt = convertTree(tree.tree);
       setVisualTree(vt);
     } catch (error) {
@@ -60,15 +132,31 @@ const App: React.FC = () => {
           <PanelGroup direction="horizontal">
             {/* 语法编辑器 */}
             <Panel defaultSize={50} minSize={20}>
-              <div className="editor-container">
-                <h3>ANTLR 语法</h3>
-                <EditorPanel
-                  value={grammar}
-                  onChange={setGrammar}
-                  language="antlr"
-                  isDarkMode={isDarkMode}
-                />
-              </div>
+               <PanelGroup direction="horizontal">
+                <Panel defaultSize={50} minSize={20}>
+                  <div className="editor-container">
+                    <h3>Lexer Grammar</h3>
+                    <EditorPanel
+                      value={lexerGrammar}
+                      onChange={setLexerGrammar}
+                      language="antlr"
+                      isDarkMode={isDarkMode}
+                    />
+                  </div>
+                </Panel>
+                <PanelResizeHandle className="resize-handle" />
+                <Panel defaultSize={50} minSize={20}>
+                  <div className="editor-container">
+                    <h3>Parser Grammar</h3>
+                    <EditorPanel
+                      value={parserGrammar}
+                      onChange={setParserGrammar}
+                      language="antlr"
+                      isDarkMode={isDarkMode}
+                    />
+                  </div>
+                </Panel>
+              </PanelGroup>
             </Panel>
             
             <PanelResizeHandle className="resize-handle" />
@@ -94,6 +182,20 @@ const App: React.FC = () => {
         <Panel defaultSize={40} minSize={20}>
           <div className="visualization-container">
             <div className="toolbar">
+              <select
+                value={selectedGrammar}
+                onChange={(e) => {
+                  const selected = grammarsList.find(g => g.name === e.target.value);
+                  if (selected) {
+                    loadGrammarContents(selected);
+                  }
+                }}
+                style={{ marginRight: '10px' }}
+              >
+                {grammarsList.map(g => (
+                  <option key={g.name} value={g.name}>{g.name}</option>
+                ))}
+              </select>
               <button onClick={handleParse} data-testid="parse-button">解析</button>
               <button onClick={toggleDarkMode} style={{ marginLeft: '10px' }}>
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
@@ -130,4 +232,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
