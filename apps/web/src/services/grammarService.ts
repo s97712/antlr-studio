@@ -3,62 +3,136 @@ import { parseInput } from '../grammar/parser/parser';
 import { convertTree } from '../grammar/parser/treeConverter';
 
 /**
- * 定义预置语法的结构信息。
+ * Defines the structure of grammar information from the original grammars.json.
  */
 export interface GrammarInfo {
   name: string;
+  description: string;
+  url: string;
+  parser?: string;
   lexer?: string;
-  parser: string;
-  input?: string;
-  startRule?: string;
-  mainGrammar?: string;
+  start?: string;
+  example?: string[];
+  imports?: string[];
 }
 
+export interface GrammarFiles {
+    parserContent: string;
+    lexerContent: string;
+    inputContent: string;
+    mainGrammar: string;
+    allGrammars: { fileName: string; content: string }[];
+}
+
+const BASE_URL = '/pre-filled-grammars/';
+
 /**
- * 从服务器获取预置语法的索引列表。
- * @async
- * @returns {Promise<GrammarInfo[]>} 返回一个包含所有语法信息的数组。
- * @throws {Error} 如果网络请求失败或响应状态不为 'ok'，则抛出错误。
+ * Fetches the list of all available grammars.
  */
 export const fetchGrammarList = async (): Promise<GrammarInfo[]> => {
-  const response = await fetch('/pre-filled-grammars/index.json');
+  const response = await fetch(`${BASE_URL}grammars.json`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   return response.json();
 };
 
+function getRelativePathFromUrl(fileUrl: string | undefined): string | null {
+    if (!fileUrl) return null;
+    try {
+        // Handles both full URLs and relative paths from the grammars.json
+        if (fileUrl.startsWith('http')) {
+            const url = new URL(fileUrl);
+            const path = url.pathname;
+            const masterIndex = path.indexOf('/master/');
+            if (masterIndex !== -1) {
+                return path.substring(masterIndex + '/master/'.length);
+            }
+        }
+        return fileUrl; // It's already a relative path
+    } catch (e) {
+        console.error(`Invalid URL or path: ${fileUrl}`);
+        return null;
+    }
+}
+
 /**
- * 根据指定的语法信息，从服务器加载对应的 Lexer、Parser 和输入文本内容。
- * @async
- * @param {GrammarInfo} grammarInfo - 包含要加载文件路径的语法信息对象。
- * @returns {Promise<{parserContent: string, lexerContent: string, inputContent: string}>} 返回一个包含文件内容的对象。
- * @throws {Error} 如果任何文件获取失败，Promise.all 将会 reject。
+ * Determines which grammar is the main one (parser vs. lexer).
+ * A simple heuristic: the one that is not imported by the other.
  */
-export const loadGrammarContents = async (grammarInfo: GrammarInfo) => {
-  const { lexer, parser, input } = grammarInfo;
-  const basePath = `/pre-filled-grammars/`;
+function determineMainGrammar(parserContent: string, lexerContent: string, parserPath: string, lexerPath: string): string {
+    const parserName = path.basename(parserPath);
+    const lexerName = path.basename(lexerPath);
 
-  const fetchPromises = [
-    parser ? fetch(`${basePath}${parser}`).then(res => res.text()) : Promise.resolve(''),
-    lexer ? fetch(`${basePath}${lexer}`).then(res => res.text()) : Promise.resolve(''),
-    input ? fetch(`${basePath}${input}`).then(res => res.text()) : Promise.resolve('')
-  ];
+    if (parserContent.includes(`import ${lexerName.replace('.g4', '')}`)) {
+        return parserName;
+    }
+    if (lexerContent.includes(`import ${parserName.replace('.g4', '')}`)) {
+        return lexerName;
+    }
+    // Default to parser if no import is found
+    return parserName;
+}
+
+/**
+ * Loads all necessary files for a given grammar.
+ */
+export const loadGrammarContents = async (grammarInfo: GrammarInfo): Promise<GrammarFiles> => {
+  const fetchPromises: Promise<[string, string]>[] = [];
+
+  const parserPath = getRelativePathFromUrl(grammarInfo.parser);
+  const lexerPath = getRelativePathFromUrl(grammarInfo.lexer);
   
-  const [parserContent, lexerContent, inputContent] = await Promise.all(fetchPromises);
+  if (parserPath) {
+    fetchPromises.push(fetch(`${BASE_URL}${parserPath}`).then(res => res.text()).then(text => [parserPath, text]));
+  }
+  if (lexerPath) {
+    fetchPromises.push(fetch(`${BASE_URL}${lexerPath}`).then(res => res.text()).then(text => [lexerPath, text]));
+  }
+  if (grammarInfo.imports) {
+      const grammarBaseDir = path.dirname(parserPath || lexerPath || '');
+      for (const imp of grammarInfo.imports) {
+          const importPath = path.join(grammarBaseDir, imp);
+          fetchPromises.push(fetch(`${BASE_URL}${importPath}`).then(res => res.text()).then(text => [importPath, text]));
+      }
+  }
 
-  return { parserContent, lexerContent, inputContent };
+  const fileResults = await Promise.all(fetchPromises);
+  
+  const allGrammars: { fileName: string; content: string }[] = fileResults.map(([path, content]) => ({
+      fileName: path.split('/').pop()!,
+      content
+  }));
+
+  const parserContent = allGrammars.find(g => g.fileName === path.basename(parserPath || ''))?.content || '';
+  const lexerContent = allGrammars.find(g => g.fileName === path.basename(lexerPath || ''))?.content || '';
+
+  let inputContent = '';
+  if (grammarInfo.example && grammarInfo.example.length > 0) {
+      const examplePath = getRelativePathFromUrl(grammarInfo.example[0]);
+      if (examplePath) {
+          const grammarBaseDir = path.dirname(parserPath || lexerPath || '');
+          const fullExamplePath = path.join(grammarBaseDir, 'examples', examplePath);
+          try {
+            const res = await fetch(`${BASE_URL}${fullExamplePath}`);
+            if (res.ok) {
+                inputContent = await res.text();
+            } else {
+                console.warn(`Could not fetch example file: ${fullExamplePath}`);
+            }
+          } catch (e) {
+            console.error(`Error fetching example file: ${e}`);
+          }
+      }
+  }
+
+  const mainGrammar = determineMainGrammar(parserContent, lexerContent, parserPath || '', lexerPath || '');
+
+  return { parserContent, lexerContent, inputContent, mainGrammar, allGrammars };
 };
 
 /**
- * 调用核心解析引擎，对输入文本进行解析，并转换成可视化树结构。
- * @async
- * @param {Array<{fileName: string, content: string}>} grammars - 包含语法文件及其内容的数组。
- * @param {string} input - 需要被解析的输入字符串。
- * @param {string} mainGrammar - 主语法文件的名称，用于启动解析。
- * @param {string} startRule - 解析过程的入口规则名称。
- * @returns {Promise<TreeNode>} 返回转换后的可视化树的根节点。
- * @throws {Error} 如果解析过程（`parseInput`）或树转换过程（`convertTree`）失败，则抛出错误。
+ * Calls the core parsing engine.
  */
 export const runParser = async (
   grammars: { fileName: string; content: string }[],
@@ -68,4 +142,11 @@ export const runParser = async (
 ): Promise<TreeNode | null> => {
   const tree = await parseInput(grammars, input, mainGrammar, startRule);
   return convertTree(tree.tree);
+};
+
+// Helper to get path module functionality in the browser
+const path = {
+    basename: (p: string) => p.split('/').reverse()[0],
+    dirname: (p: string) => p.substring(0, p.lastIndexOf('/')),
+    join: (...parts: string[]) => parts.join('/').replace(/\/+/g, '/')
 };

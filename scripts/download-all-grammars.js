@@ -2,16 +2,26 @@ const fs = require('fs');
 const path = require('path');
 
 const GRAMMAR_INDEX_URL = 'https://raw.githubusercontent.com/antlr/grammars-v4/master/grammars.json';
+const BASE_URL = 'https://raw.githubusercontent.com/antlr/grammars-v4/master/';
 const OUTPUT_DIR = 'apps/web/public/pre-filled-grammars';
 
 async function downloadFile(url, filePath) {
   try {
-    console.log(`  Downloading ${url} to ${filePath}`);
+    console.log(`  Downloading ${url}`);
     const response = await fetch(url);
     if (!response.ok) {
+      // 404 is a common case for examples, so we'll just log it and continue
+      if (response.status === 404) {
+        console.warn(`  File not found (404): ${url}`);
+        return false;
+      }
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
     const content = await response.text();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(filePath, content);
     console.log(`  Saved: ${filePath}`);
     return true;
@@ -19,11 +29,6 @@ async function downloadFile(url, filePath) {
     console.error(`  Failed to download or save ${url}:`, error.message);
     return false;
   }
-}
-
-function getGrammarName(content) {
-    const match = content.match(/(?:parser|lexer)\s+grammar\s+([a-zA-Z_]\w*)\s*;/);
-    return match ? match[1].trim() : null;
 }
 
 async function main() {
@@ -39,78 +44,59 @@ async function main() {
     }
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-    const finalIndex = [];
+    // Save the original grammars.json
+    const originalIndexPath = path.join(OUTPUT_DIR, 'grammars.json');
+    fs.writeFileSync(originalIndexPath, JSON.stringify(allGrammars, null, 2));
+    console.log(`Saved original grammar index to: ${originalIndexPath}`);
+
 
     for (const grammarInfo of allGrammars) {
       console.log(`\nProcessing grammar: "${grammarInfo.name}"`);
-      const grammarOutputDir = path.join(OUTPUT_DIR, grammarInfo.name);
-      if (!fs.existsSync(grammarOutputDir)) {
-        fs.mkdirSync(grammarOutputDir, { recursive: true });
-      }
 
-      const finalGrammarData = {
-        name: grammarInfo.name,
-        startRule: grammarInfo.start,
-      };
-
-      let parserFileName, lexerFileName;
+      const urlsToDownload = [];
+      const grammarBaseUrl = grammarInfo.parser ? grammarInfo.parser.substring(0, grammarInfo.parser.lastIndexOf('/')) : (grammarInfo.lexer ? grammarInfo.lexer.substring(0, grammarInfo.lexer.lastIndexOf('/')) : null);
 
       if (grammarInfo.parser) {
-        const tempPath = path.join(grammarOutputDir, 'temp_parser.g4');
-        if (await downloadFile(grammarInfo.parser, tempPath)) {
-            const content = fs.readFileSync(tempPath, 'utf-8');
-            const grammarName = getGrammarName(content);
-            parserFileName = grammarName ? `${grammarName}.g4` : grammarInfo.parser.split('/').pop();
-            const finalPath = path.join(grammarOutputDir, parserFileName);
-            fs.renameSync(tempPath, finalPath);
-            finalGrammarData.parser = `${grammarInfo.name}/${parserFileName}`;
-            finalGrammarData.mainGrammar = parserFileName;
-            console.log(`    Parser grammar set to: "${parserFileName}"`);
-        } else {
-            continue; // Skip this grammar if parser download fails
-        }
+        urlsToDownload.push(grammarInfo.parser);
       }
-
       if (grammarInfo.lexer) {
-        const tempPath = path.join(grammarOutputDir, 'temp_lexer.g4');
-        if (await downloadFile(grammarInfo.lexer, tempPath)) {
-            const content = fs.readFileSync(tempPath, 'utf-8');
-            const grammarName = getGrammarName(content);
-            lexerFileName = grammarName ? `${grammarName}.g4` : grammarInfo.lexer.split('/').pop();
-            const finalPath = path.join(grammarOutputDir, lexerFileName);
-            fs.renameSync(tempPath, finalPath);
-            finalGrammarData.lexer = `${grammarInfo.name}/${lexerFileName}`;
-            console.log(`    Lexer grammar set to: "${lexerFileName}"`);
-        }
-      }
-
-      if (grammarInfo.example && grammarInfo.example.length > 0) {
-        const exampleFileName = grammarInfo.example[0];
-        const baseDir = grammarInfo.parser ? grammarInfo.parser.substring(0, grammarInfo.parser.lastIndexOf('/')) : (grammarInfo.lexer ? grammarInfo.lexer.substring(0, grammarInfo.lexer.lastIndexOf('/')) : '');
-        if (baseDir) {
-            let exampleUrl = `${baseDir}/examples/${exampleFileName}`.replace(/\/\//g, '/');
-            const exampleFilePath = path.join(grammarOutputDir, exampleFileName);
-            if (await downloadFile(exampleUrl, exampleFilePath)) {
-                finalGrammarData.input = `${grammarInfo.name}/${exampleFileName}`;
-            }
-        }
+        urlsToDownload.push(grammarInfo.lexer);
       }
       
-      finalIndex.push(finalGrammarData);
-    }
+      if (grammarBaseUrl) {
+        if (grammarInfo.imports) {
+          for (const imp of grammarInfo.imports) {
+            urlsToDownload.push(`${grammarBaseUrl}/${imp}`);
+          }
+        }
+        if (grammarInfo.example) {
+          for (const ex of grammarInfo.example) {
+            urlsToDownload.push(`${grammarBaseUrl}/examples/${ex}`);
+          }
+        }
+      }
 
-    if (finalIndex.length > 0) {
-      const indexPath = path.join(OUTPUT_DIR, 'index.json');
-      fs.writeFileSync(indexPath, JSON.stringify(finalIndex, null, 2));
-      console.log(`\nSuccessfully generated index file: ${indexPath}`);
-    } else {
-      console.warn('\nWarning: No grammars were successfully processed. Index file not generated.');
+      for (const url of urlsToDownload) {
+        if (!url) continue;
+
+        // Some entries in grammars.json are full URLs, some are relative paths
+        const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+        
+        if (!fullUrl.startsWith(BASE_URL)) {
+          console.warn(`  Skipping URL with unexpected format: ${fullUrl}`);
+          continue;
+        }
+
+        const relativePath = fullUrl.substring(BASE_URL.length);
+        const filePath = path.join(OUTPUT_DIR, relativePath);
+        await downloadFile(fullUrl, filePath);
+      }
     }
 
     console.log('\nScript finished.');
 
   } catch (error) {
-    console.error('\nA critical error occurred during script execution:', error.message);
+    console.error('\nA critical error occurred during script execution:', error);
   }
 }
 

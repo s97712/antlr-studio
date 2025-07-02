@@ -9,7 +9,8 @@ import {
   fetchGrammarList,
   loadGrammarContents,
   runParser,
-  type GrammarInfo
+  type GrammarInfo,
+  type GrammarFiles
 } from './services/grammarService'; // 导入服务
 
 const App: React.FC = () => {
@@ -23,22 +24,27 @@ const App: React.FC = () => {
   const [isDarkMode, toggleDarkMode] = useDarkMode(); // 使用自定义 Hook
   const [isLoading, setIsLoading] = useState(true); // 新增 loading 状态
   const [startRule, setStartRule] = useState<string>(''); // 新增 state
+  const [currentGrammarFiles, setCurrentGrammarFiles] = useState<GrammarFiles | null>(null);
 
   const handleSelectGrammar = async (grammarInfo: GrammarInfo | undefined) => {
     if (!grammarInfo) return;
 
     try {
-      const { parserContent, lexerContent, inputContent } = await loadGrammarContents(grammarInfo);
-      setParserGrammar(parserContent);
-      setLexerGrammar(lexerContent);
-      setInput(inputContent);
+      setIsLoading(true);
+      const files = await loadGrammarContents(grammarInfo);
+      setCurrentGrammarFiles(files);
+      setParserGrammar(files.parserContent);
+      setLexerGrammar(files.lexerContent);
+      setInput(files.inputContent);
       setSelectedGrammar(grammarInfo.name);
-      setStartRule(grammarInfo.startRule || ''); // 初始化 startRule
+      setStartRule(grammarInfo.start || ''); // Initialize with default start rule
       setVisualTree(null);
       setErrors([]);
     } catch (error) {
       console.error("加载预置语法失败:", error);
       setErrors([`加载预置语法 '${grammarInfo.name}' 失败`]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -61,26 +67,25 @@ const App: React.FC = () => {
   }, []); // 依赖项为空，仅在初次渲染时执行
 
   const handleParse = async () => {
-    if (!parserGrammar.trim()) {
-      setErrors(['Parser 语法不能为空']);
+    if (!parserGrammar.trim() && !lexerGrammar.trim()) {
+      setErrors(['Parser and Lexer grammars cannot both be empty.']);
       return;
     }
+    if (!startRule.trim()) {
+        setErrors(['Start rule cannot be empty.']);
+        return;
+    }
+    if (!currentGrammarFiles) {
+        setErrors(['Grammar files not loaded.']);
+        return;
+    }
+
     setVisualTree(null);
     setErrors([]);
     
     try {
-      const selectedGrammarInfo = grammarsList.find(g => g.name === selectedGrammar);
-      if (!startRule || !selectedGrammarInfo?.mainGrammar) {
-        setErrors([`语法 "${selectedGrammarInfo?.name}" 未定义入口规则或主语法文件。`]);
-        return;
-      }
-
-      const grammars = [{ fileName: selectedGrammarInfo.parser.split('/').pop()!, content: parserGrammar }];
-      if (lexerGrammar.trim() && selectedGrammarInfo.lexer) {
-          grammars.push({ fileName: selectedGrammarInfo.lexer.split('/').pop()!, content: lexerGrammar });
-      }
-
-      const vt = await runParser(grammars, input, selectedGrammarInfo.mainGrammar, startRule);
+      // The service now provides all necessary grammar files with correct names
+      const vt = await runParser(currentGrammarFiles.allGrammars, input, currentGrammarFiles.mainGrammar, startRule);
       setVisualTree(vt);
     } catch (error) {
       console.error('解析失败:', error);
