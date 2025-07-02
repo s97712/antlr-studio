@@ -13,6 +13,8 @@ import {
   type GrammarFiles
 } from './services/grammarService'; // 导入服务
 
+type UIState = 'INITIAL_LOADING' | 'IDLE' | 'PARSING' | 'LOADING_GRAMMAR';
+
 const App: React.FC = () => {
   const [lexerGrammar, setLexerGrammar] = useState<string>('');
   const [parserGrammar, setParserGrammar] = useState<string>('');
@@ -22,29 +24,29 @@ const App: React.FC = () => {
   const [grammarsList, setGrammarsList] = useState<GrammarInfo[]>([]);
   const [selectedGrammar, setSelectedGrammar] = useState<string>('');
   const [isDarkMode, toggleDarkMode] = useDarkMode(); // 使用自定义 Hook
-  const [isLoading, setIsLoading] = useState(true); // 新增 loading 状态
-  const [startRule, setStartRule] = useState<string>(''); // 新增 state
+  const [uiState, setUiState] = useState<UIState>('INITIAL_LOADING');
+  const [startRule, setStartRule] = useState<string>('');
   const [currentGrammarFiles, setCurrentGrammarFiles] = useState<GrammarFiles | null>(null);
 
   const handleSelectGrammar = async (grammarInfo: GrammarInfo | undefined) => {
     if (!grammarInfo) return;
 
     try {
-      setIsLoading(true);
+      setUiState('LOADING_GRAMMAR');
       const files = await loadGrammarContents(grammarInfo);
       setCurrentGrammarFiles(files);
       setParserGrammar(files.parserContent);
       setLexerGrammar(files.lexerContent);
       setInput(files.inputContent);
       setSelectedGrammar(grammarInfo.name);
-      setStartRule(grammarInfo.start || ''); // Initialize with default start rule
+      setStartRule(grammarInfo.start || '');
       setVisualTree(null);
       setErrors([]);
     } catch (error) {
       console.error("加载预置语法失败:", error);
       setErrors([`加载预置语法 '${grammarInfo.name}' 失败`]);
     } finally {
-      setIsLoading(false);
+      setUiState('IDLE');
     }
   };
 
@@ -60,11 +62,11 @@ const App: React.FC = () => {
         console.error("获取语法索引失败:", error);
         setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
       } finally {
-        setIsLoading(false); // 无论成功或失败，都结束 loading
+        setUiState('IDLE');
       }
     };
     init();
-  }, []); // 依赖项为空，仅在初次渲染时执行
+  }, []);
 
   const handleParse = async () => {
     if (!parserGrammar.trim() && !lexerGrammar.trim()) {
@@ -82,25 +84,25 @@ const App: React.FC = () => {
 
     setVisualTree(null);
     setErrors([]);
+    setUiState('PARSING');
     
     try {
-      // The service now provides all necessary grammar files with correct names
       const vt = await runParser(currentGrammarFiles.allGrammars, input, currentGrammarFiles.mainGrammar, startRule);
       setVisualTree(vt);
     } catch (error) {
       console.error('解析失败:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       setErrors([errorMessage]);
+    } finally {
+      setUiState('IDLE');
     }
   };
   
   return (
     <div className="app-container">
       <PanelGroup direction="vertical">
-        {/* 顶部面板组：语法和输入编辑器 */}
         <Panel defaultSize={60} minSize={30}>
           <PanelGroup direction="horizontal">
-            {/* 语法编辑器 */}
             <Panel defaultSize={33.3} minSize={20}>
                <PanelGroup direction="horizontal">
                 <Panel defaultSize={50} minSize={20}>
@@ -131,7 +133,6 @@ const App: React.FC = () => {
                 </Panel>
             <PanelResizeHandle className="resize-handle" />
             
-            {/* 输入文本编辑器 */}
             <Panel defaultSize={33.3} minSize={20}>
               <div className="editor-container">
                 <h3>Input Text</h3>
@@ -148,7 +149,6 @@ const App: React.FC = () => {
         
         <PanelResizeHandle className="resize-handle" />
         
-        {/* 底部面板：解析树可视化和错误信息 */}
         <Panel defaultSize={40} minSize={20}>
           <div className="visualization-container">
             <div className="toolbar">
@@ -170,8 +170,8 @@ const App: React.FC = () => {
                   placeholder="Start Rule"
                   className="start-rule-input"
               />
-              <button onClick={handleParse} data-testid="parse-button" disabled={isLoading}>
-                {isLoading ? '加载中...' : '解析'}
+              <button onClick={handleParse} data-testid="parse-button" disabled={uiState !== 'IDLE'}>
+                解析
               </button>
               <button onClick={toggleDarkMode}>
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
@@ -187,11 +187,11 @@ const App: React.FC = () => {
               </div>
             )}
             <div data-testid="parse-tree-container" style={{ flex: 1, height: 0 }} >
-              {visualTree ? (
-                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />
-              ) : (
-                <div>解析树加载中...</div>
-              )}
+              {uiState === 'INITIAL_LOADING' && <div>应用加载中...</div>}
+              {uiState === 'LOADING_GRAMMAR' && <div>加载语法中...</div>}
+              {uiState === 'PARSING' && <div>解析树加载中...</div>}
+              {uiState === 'IDLE' && visualTree && <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />}
+              {uiState === 'IDLE' && !visualTree && <div>点击“解析”以生成解析树</div>}
             </div>
           </div>
         </Panel>
