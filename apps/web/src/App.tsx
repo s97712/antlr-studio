@@ -3,6 +3,7 @@ import './App.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import EditorPanel from './components/EditorPanel';
 import D3ParseTree from './grammar/components/D3ParseTree';
+import CanvasParseTree from './grammar/components/CanvasParseTree';
 import type { TreeNode } from './grammar/parser/treeConverter';
 import { useDarkMode } from './hooks/useDarkMode'; // 导入自定义 Hook
 import {
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [grammarsList, setGrammarsList] = useState<GrammarInfo[]>([]);
   const [selectedGrammar, setSelectedGrammar] = useState<string>('');
   const [isDarkMode, toggleDarkMode] = useDarkMode(); // 使用自定义 Hook
+  const [renderMode, setRenderMode] = useState<'svg' | 'canvas'>('canvas');
   const [uiState, setUiState] = useState<UIState>('INITIAL_LOADING');
   const [startRule, setStartRule] = useState<string>('');
   const [currentGrammarFiles, setCurrentGrammarFiles] = useState<GrammarFiles | null>(null);
@@ -176,6 +178,9 @@ const App: React.FC = () => {
               <button onClick={toggleDarkMode}>
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
               </button>
+              <button onClick={() => setRenderMode(renderMode === 'svg' ? 'canvas' : 'svg')} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ml-2">
+                切换到 {renderMode === 'svg' ? 'Canvas' : 'SVG'} 渲染
+              </button>
             </div>
             {errors.length > 0 && (
               <div className="error-panel">
@@ -190,7 +195,13 @@ const App: React.FC = () => {
               {uiState === 'INITIAL_LOADING' && <div>应用加载中...</div>}
               {uiState === 'LOADING_GRAMMAR' && <div>加载语法中...</div>}
               {uiState === 'PARSING' && <div>解析树加载中...</div>}
-              {uiState === 'IDLE' && visualTree && <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />}
+              {uiState === 'IDLE' && visualTree && (
+                renderMode === 'svg' ? (
+                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />
+                ) : (
+                  <CanvasParseTree data={visualTree} isDarkMode={isDarkMode} />
+                )
+              )}
               {uiState === 'IDLE' && !visualTree && <div>点击“解析”以生成解析树</div>}
             </div>
           </div>
