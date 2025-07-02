@@ -66,8 +66,16 @@ div[data-panel-group-direction="horizontal"] > .resize-handle {
   border: 1px solid #CBD5E0;
 }
 
+.start-rule-input {
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  border: 1px solid #CBD5E0;
+  background-color: #fff;
+  color: #333;
+}
 
-body.dark .toolbar button, body.dark .toolbar select {
+body.dark .toolbar button, body.dark .toolbar select, body.dark .start-rule-input {
     border-color: #444;
     background-color: #3a3a3a;
     color: #eee;

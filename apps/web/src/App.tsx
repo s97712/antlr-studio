@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [selectedGrammar, setSelectedGrammar] = useState<string>('');
   const [isDarkMode, toggleDarkMode] = useDarkMode(); // 使用自定义 Hook
   const [isLoading, setIsLoading] = useState(true); // 新增 loading 状态
+  const [startRule, setStartRule] = useState<string>(''); // 新增 state
 
   const handleSelectGrammar = async (grammarInfo: GrammarInfo | undefined) => {
     if (!grammarInfo) return;
@@ -32,6 +33,7 @@ const App: React.FC = () => {
       setLexerGrammar(lexerContent);
       setInput(inputContent);
       setSelectedGrammar(grammarInfo.name);
+      setStartRule(grammarInfo.startRule || ''); // 初始化 startRule
       setVisualTree(null);
       setErrors([]);
     } catch (error) {
@@ -68,7 +70,7 @@ const App: React.FC = () => {
     
     try {
       const selectedGrammarInfo = grammarsList.find(g => g.name === selectedGrammar);
-      if (!selectedGrammarInfo?.startRule || !selectedGrammarInfo.mainGrammar) {
+      if (!startRule || !selectedGrammarInfo?.mainGrammar) {
         setErrors([`语法 "${selectedGrammarInfo?.name}" 未定义入口规则或主语法文件。`]);
         return;
       }
@@ -78,7 +80,7 @@ const App: React.FC = () => {
           grammars.push({ fileName: selectedGrammarInfo.lexer.split('/').pop()!, content: lexerGrammar });
       }
 
-      const vt = await runParser(grammars, input, selectedGrammarInfo.mainGrammar, selectedGrammarInfo.startRule);
+      const vt = await runParser(grammars, input, selectedGrammarInfo.mainGrammar, startRule);
       setVisualTree(vt);
     } catch (error) {
       console.error('解析失败:', error);
@@ -156,6 +158,13 @@ const App: React.FC = () => {
                   <option key={g.name} value={g.name}>{g.name}</option>
                 ))}
               </select>
+              <input
+                  type="text"
+                  value={startRule}
+                  onChange={(e) => setStartRule(e.target.value)}
+                  placeholder="Start Rule"
+                  className="start-rule-input"
+              />
               <button onClick={handleParse} data-testid="parse-button" disabled={isLoading}>
                 {isLoading ? '加载中...' : '解析'}
               </button>
