@@ -4,47 +4,34 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import EditorPanel from './components/EditorPanel';
 import D3ParseTree from './grammar/components/D3ParseTree';
 import type { TreeNode } from './grammar/parser/treeConverter';
-
-import { parseInput } from './grammar/parser/parser';
-import { convertTree } from './grammar/parser/treeConverter';
-
-interface GrammarInfo {
-  name: string;
-  lexer?: string;
-  parser: string;
-  input?: string;
-  startRule?: string;
-  mainGrammar?: string;
-}
+import { useDarkMode } from './hooks/useDarkMode'; // 导入自定义 Hook
+import {
+  fetchGrammarList,
+  loadGrammarContents,
+  runParser,
+  type GrammarInfo
+} from './services/grammarService'; // 导入服务
 
 const App: React.FC = () => {
   const [lexerGrammar, setLexerGrammar] = useState<string>('');
   const [parserGrammar, setParserGrammar] = useState<string>('');
   const [input, setInput] = useState<string>('');
   const [visualTree, setVisualTree] = useState<TreeNode | null>(null);
-  const [initialFocusNode, setInitialFocusNode] = useState<TreeNode | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [grammarsList, setGrammarsList] = useState<GrammarInfo[]>([]);
   const [selectedGrammar, setSelectedGrammar] = useState<string>('');
+  const [isDarkMode, toggleDarkMode] = useDarkMode(); // 使用自定义 Hook
 
-  const loadGrammarContents = async (grammarInfo: GrammarInfo) => {
+  const handleSelectGrammar = async (grammarName: string) => {
+    const grammarInfo = grammarsList.find(g => g.name === grammarName);
+    if (!grammarInfo) return;
+
     try {
-      const { name, lexer, parser, input } = grammarInfo;
-      const basePath = `/pre-filled-grammars/`;
-
-      const fetchPromises = [
-        parser ? fetch(`${basePath}${parser}`).then(res => res.text()) : Promise.resolve(''),
-        lexer ? fetch(`${basePath}${lexer}`).then(res => res.text()) : Promise.resolve(''),
-        input ? fetch(`${basePath}${input}`).then(res => res.text()) : Promise.resolve('')
-      ];
-      
-      const [parserContent, lexerContent, inputContent] = await Promise.all(fetchPromises);
-      
+      const { parserContent, lexerContent, inputContent } = await loadGrammarContents(grammarInfo);
       setParserGrammar(parserContent);
       setLexerGrammar(lexerContent);
       setInput(inputContent);
-      setSelectedGrammar(name);
+      setSelectedGrammar(grammarInfo.name);
       setVisualTree(null);
       setErrors([]);
     } catch (error) {
@@ -54,33 +41,20 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchGrammarIndex = async () => {
+    const init = async () => {
       try {
-        const response = await fetch('/pre-filled-grammars/index.json');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: GrammarInfo[] = await response.json();
+        const data = await fetchGrammarList();
         setGrammarsList(data);
         if (data.length > 0) {
-          setSelectedGrammar(data[0].name);
-          loadGrammarContents(data[0]);
+          await handleSelectGrammar(data[0].name);
         }
       } catch (error) {
         console.error("获取语法索引失败:", error);
         setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
       }
     };
-    fetchGrammarIndex();
-  }, []);
-
-  useEffect(() => {
-    document.body.classList.toggle('dark', isDarkMode);
-  }, [isDarkMode]);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(prevMode => !prevMode);
-  };
+    init();
+  }, []); // 依赖项为空，仅在初次渲染时执行
 
   const handleParse = async () => {
     if (!parserGrammar.trim()) {
@@ -88,18 +62,12 @@ const App: React.FC = () => {
       return;
     }
     setVisualTree(null);
-    setInitialFocusNode(null); // Reset focus node on each parse
     setErrors([]);
     
     try {
       const selectedGrammarInfo = grammarsList.find(g => g.name === selectedGrammar);
-      if (!selectedGrammarInfo) {
-        setErrors(['未找到选定的语法信息']);
-        return;
-      }
-
-      if (!selectedGrammarInfo.startRule) {
-        setErrors([`语法 "${selectedGrammarInfo.name}" 未定义入口规则 (startRule)。`]);
+      if (!selectedGrammarInfo?.startRule || !selectedGrammarInfo.mainGrammar) {
+        setErrors([`语法 "${selectedGrammarInfo?.name}" 未定义入口规则或主语法文件。`]);
         return;
       }
 
@@ -108,16 +76,8 @@ const App: React.FC = () => {
           grammars.push({ fileName: selectedGrammarInfo.lexer.split('/').pop()!, content: lexerGrammar });
       }
 
-      if (!selectedGrammarInfo.mainGrammar) {
-        setErrors([`语法 "${selectedGrammarInfo.name}" 未定义主语法文件 (mainGrammar)。`]);
-        return;
-      }
-
-      const tree = await parseInput(grammars, input, selectedGrammarInfo.mainGrammar, selectedGrammarInfo.startRule);
-      
-      const vt = convertTree(tree.tree);
+      const vt = await runParser(grammars, input, selectedGrammarInfo.mainGrammar, selectedGrammarInfo.startRule);
       setVisualTree(vt);
-      setInitialFocusNode(vt); // Set the root of the new tree as the initial focus
     } catch (error) {
       console.error('解析失败:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -185,12 +145,7 @@ const App: React.FC = () => {
             <div className="toolbar">
               <select
                 value={selectedGrammar}
-                onChange={(e) => {
-                  const selected = grammarsList.find(g => g.name === e.target.value);
-                  if (selected) {
-                    loadGrammarContents(selected);
-                  }
-                }}
+                onChange={(e) => handleSelectGrammar(e.target.value)}
               >
                 {grammarsList.map(g => (
                   <option key={g.name} value={g.name}>{g.name}</option>
@@ -212,7 +167,7 @@ const App: React.FC = () => {
             )}
             <div data-testid="parse-tree-container" style={{ flex: 1, height: 0 }} >
               {visualTree ? (
-                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} initialFocusNode={initialFocusNode} />
+                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />
               ) : (
                 <div>解析树加载中...</div>
               )}

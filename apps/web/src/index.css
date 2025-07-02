@@ -76,7 +76,8 @@ body:not(.dark) a:hover {
   color: #747bff;
 }
 
-body:not(.dark) button {
+body:not(.dark) button,
+body:not(.dark) select {
   background-color: #d0d0d0;
   color: #000; /* 确保文本颜色为黑色，提高对比度 */
 }

@@ -56,7 +56,23 @@ div[data-panel-group-direction="horizontal"] > .resize-handle {
   border-bottom: 1px solid #ccc;
   display: flex;
   gap: 5px;
+  align-items: center;
 }
+
+.toolbar button, .toolbar select {
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  border: 1px solid #CBD5E0;
+}
+
+
+body.dark .toolbar button, body.dark .toolbar select {
+    border-color: #444;
+    background-color: #3a3a3a;
+    color: #eee;
+}
+
 
 /* 树形图样式 */
 .link {
@@ -64,6 +80,38 @@ div[data-panel-group-direction="horizontal"] > .resize-handle {
   stroke: #555;
   stroke-opacity: 0.6;
   stroke-width: 1.5px;
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F7FAFC; /* Consistent with light theme background */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E0; /* Consistent with light theme borders */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A0AEC0; /* Consistent with light theme interactive elements */
+}
+
+/* Dark Mode Scrollbar Overrides */
+body.dark ::-webkit-scrollbar-track {
+  background: #1A202C; /* Consistent with dark theme background */
+}
+
+body.dark ::-webkit-scrollbar-thumb {
+  background: #4A5568; /* Consistent with dark theme borders */
+}
+
+body.dark ::-webkit-scrollbar-thumb:hover {
+  background: #718096; /* A slightly lighter shade for hover */
 }
 
 
