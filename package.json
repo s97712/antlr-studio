@@ -8,7 +8,7 @@
     "dev": "concurrently \"pnpm run dev:web\" \"pnpm run dev:api\"",
     "dev:web": "cd apps/web && pnpm run dev",
     "dev:api": "netlify dev",
-    "build:highlight": "npm run clean:generated && java -jar netlify/functions/antlr-compiler/antlr-4.13.1-complete.jar -Dlanguage=TypeScript -o apps/web/src/grammar/generated -visitor -lib apps/web/src/grammar/grammars apps/web/src/grammar/grammars/ANTLRv4Lexer.g4 apps/web/src/grammar/grammars/ANTLRv4Parser.g4",
+    "build:highlight": "java -jar netlify/functions/antlr-compiler/antlr-4.13.1-complete.jar -Dlanguage=TypeScript -o apps/web/src/grammar/generated -visitor -lib apps/web/src/grammar/grammars apps/web/src/grammar/grammars/ANTLRv4Lexer.g4 apps/web/src/grammar/grammars/ANTLRv4Parser.g4",
     "clean:generated": "rm -f apps/web/src/grammar/generated/*"
   },
   "keywords": [],

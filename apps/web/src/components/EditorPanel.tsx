@@ -3,8 +3,7 @@ import { basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
-import { syntaxHighlighting } from '@codemirror/language';
-import { antlrGrammarSyntax } from '@/grammar/components/antlrSyntax';
+import { antlrLanguage } from '@/grammar/components/antlrLanguage';
 import { ViewUpdate } from '@codemirror/view';
 import { oneDark } from '@codemirror/theme-one-dark'; // 导入暗色主题
 import { EditorView as EditorViewTheme } from '@codemirror/view'; // 导入亮色主题
@@ -36,7 +35,7 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
       extensions: [
         basicSetup,
         keymap.of([indentWithTab]),
-        language === 'antlr' ? syntaxHighlighting(antlrGrammarSyntax) : [],
+        language === 'antlr' ? [antlrLanguage] : [],
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
             const newValue = update.state.doc.toString();

@@ -3,10 +3,9 @@ const path = require('path');
 
 const GRAMMAR_INDEX_URL = 'https://raw.githubusercontent.com/antlr/grammars-v4/master/grammars.json';
 const OUTPUT_DIR = 'apps/web/public/pre-filled-grammars';
-const GRAMMARS_TO_FETCH = ['Ada', 'C', 'JSON']; // 定义要获取的语法列表
 
 function getGrammarName(content) {
-  const match = content.match(/(?:parser|lexer)\s+grammar\s+([^;]+);/);
+  const match = content.match(/(?:parser|lexer)\s+grammar\s+([a-zA-Z_]\w*)\s*;/);
   return match ? match[1].trim() : null;
 }
 
@@ -84,7 +83,7 @@ async function main() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
     const finalIndex = [];
-    const grammarsToProcess = allGrammars.filter(g => GRAMMARS_TO_FETCH.includes(g.name));
+    const grammarsToProcess = allGrammars;
 
     for (const grammar of grammarsToProcess) {
       const result = await processGrammar(grammar);

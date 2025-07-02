@@ -21,9 +21,9 @@ const App: React.FC = () => {
   const [grammarsList, setGrammarsList] = useState<GrammarInfo[]>([]);
   const [selectedGrammar, setSelectedGrammar] = useState<string>('');
   const [isDarkMode, toggleDarkMode] = useDarkMode(); // 使用自定义 Hook
+  const [isLoading, setIsLoading] = useState(true); // 新增 loading 状态
 
-  const handleSelectGrammar = async (grammarName: string) => {
-    const grammarInfo = grammarsList.find(g => g.name === grammarName);
+  const handleSelectGrammar = async (grammarInfo: GrammarInfo | undefined) => {
     if (!grammarInfo) return;
 
     try {
@@ -46,11 +46,13 @@ const App: React.FC = () => {
         const data = await fetchGrammarList();
         setGrammarsList(data);
         if (data.length > 0) {
-          await handleSelectGrammar(data[0].name);
+          await handleSelectGrammar(data[0]);
         }
       } catch (error) {
         console.error("获取语法索引失败:", error);
         setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
+      } finally {
+        setIsLoading(false); // 无论成功或失败，都结束 loading
       }
     };
     init();
@@ -145,13 +147,18 @@ const App: React.FC = () => {
             <div className="toolbar">
               <select
                 value={selectedGrammar}
-                onChange={(e) => handleSelectGrammar(e.target.value)}
+                onChange={(e) => {
+                  const selected = grammarsList.find(g => g.name === e.target.value);
+                  handleSelectGrammar(selected);
+                }}
               >
                 {grammarsList.map(g => (
                   <option key={g.name} value={g.name}>{g.name}</option>
                 ))}
               </select>
-              <button onClick={handleParse} data-testid="parse-button">解析</button>
+              <button onClick={handleParse} data-testid="parse-button" disabled={isLoading}>
+                {isLoading ? '加载中...' : '解析'}
+              </button>
               <button onClick={toggleDarkMode}>
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
               </button>

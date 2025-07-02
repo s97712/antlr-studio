@@ -65,4 +65,3 @@ pnpm run dev
 - **仅启动Netlify Functions模拟器:**
   ```bash
   pnpm run dev:api
-  ```
