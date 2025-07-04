@@ -123,19 +123,15 @@ const App: React.FC = () => {
         <Panel defaultSize={60} minSize={30}>
           <PanelGroup direction="horizontal">
             <Panel defaultSize={33.3} minSize={20}>
-               <PanelGroup direction="horizontal">
-                <Panel defaultSize={50} minSize={20}>
-                  <div className="editor-container">
-                    <h3>Lexer Grammar</h3>
-                    <EditorPanel
-                      value={lexerGrammar}
-                      onChange={setLexerGrammar}
-                      language="antlr"
-                      isDarkMode={isDarkMode}
-                    />
-                  </div>
-                </Panel>
-              </PanelGroup>
+              <div className="editor-container">
+                <h3>Lexer Grammar</h3>
+                <EditorPanel
+                  value={lexerGrammar}
+                  onChange={setLexerGrammar}
+                  language="antlr"
+                  isDarkMode={isDarkMode}
+                />
+              </div>
             </Panel>
             
             <PanelResizeHandle className="resize-handle" />
@@ -152,7 +148,7 @@ const App: React.FC = () => {
                 </Panel>
             <PanelResizeHandle className="resize-handle" />
             
-            <Panel defaultSize={33.3} minSize={20}>
+            <Panel minSize={20}>
               <div className="editor-container">
                 <h3>Input Text</h3>
                 <EditorPanel
@@ -179,8 +175,8 @@ const App: React.FC = () => {
                 }}
                 aria-label="选择预置语法"
               >
-                {grammarsList.map(g => (
-                  <option key={g.name} value={g.name}>{g.name}</option>
+                {grammarsList.map((g, i) => (
+                  <option key={`${g.name}-${i}`} value={g.name}>{g.name}</option>
                 ))}
               </select>
               <input

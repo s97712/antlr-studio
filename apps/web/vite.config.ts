@@ -24,7 +24,6 @@ export default defineConfig({
     },
     // 允许从Docker内部访问
     hmr: {
-      host: 'host.docker.internal', // 允许从Docker内部访问
       protocol: 'ws',
     },
     watch: {

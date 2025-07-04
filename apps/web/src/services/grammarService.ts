@@ -24,7 +24,7 @@ export interface GrammarFiles {
     allGrammars: { fileName: string; content: string }[];
 }
 
-const BASE_URL = '/pre-filled-grammars/';
+const BASE_URL = 'https://raw.githubusercontent.com/antlr/grammars-v4/master/';
 
 /**
  * Fetches the list of all available grammars.
@@ -39,8 +39,13 @@ export const fetchGrammarList = async (): Promise<GrammarInfo[]> => {
 
 function getRelativePathFromUrl(fileUrl: string | undefined): string | null {
     if (!fileUrl) return null;
+    // The URLs in grammars.json are now full URLs, so we just return them.
+    // We need to extract the path relative to the new BASE_URL for other logic to work.
+    if (fileUrl.startsWith(BASE_URL)) {
+        return fileUrl.substring(BASE_URL.length);
+    }
+    // This will handle cases where the URL might be different, though it's not expected.
     try {
-        // Handles both full URLs and relative paths from the grammars.json
         if (fileUrl.startsWith('http')) {
             const url = new URL(fileUrl);
             const path = url.pathname;
@@ -49,7 +54,7 @@ function getRelativePathFromUrl(fileUrl: string | undefined): string | null {
                 return path.substring(masterIndex + '/master/'.length);
             }
         }
-        return fileUrl; // It's already a relative path
+        return fileUrl;
     } catch (e) {
         console.error(`Invalid URL or path: ${fileUrl}`);
         return null;
@@ -84,16 +89,19 @@ export const loadGrammarContents = async (grammarInfo: GrammarInfo): Promise<Gra
   const lexerPath = getRelativePathFromUrl(grammarInfo.lexer);
   
   if (parserPath) {
-    fetchPromises.push(fetch(`${BASE_URL}${parserPath}`).then(res => res.text()).then(text => [parserPath, text]));
+    fetchPromises.push(fetch(`${grammarInfo.parser}`).then(res => res.text()).then(text => [parserPath, text]));
   }
   if (lexerPath) {
-    fetchPromises.push(fetch(`${BASE_URL}${lexerPath}`).then(res => res.text()).then(text => [lexerPath, text]));
+    fetchPromises.push(fetch(`${grammarInfo.lexer}`).then(res => res.text()).then(text => [lexerPath, text]));
   }
   if (grammarInfo.imports) {
-      const grammarBaseDir = path.dirname(parserPath || lexerPath || '');
+      const grammarBaseUrl = path.dirname(grammarInfo.parser || grammarInfo.lexer || '');
       for (const imp of grammarInfo.imports) {
-          const importPath = path.join(grammarBaseDir, imp);
-          fetchPromises.push(fetch(`${BASE_URL}${importPath}`).then(res => res.text()).then(text => [importPath, text]));
+          const importUrl = new URL(imp, grammarBaseUrl + '/').toString();
+          const importPath = getRelativePathFromUrl(importUrl);
+          if (importPath) {
+            fetchPromises.push(fetch(importUrl).then(res => res.text()).then(text => [importPath, text]));
+          }
       }
   }
 
@@ -109,20 +117,20 @@ export const loadGrammarContents = async (grammarInfo: GrammarInfo): Promise<Gra
 
   let inputContent = '';
   if (grammarInfo.example && grammarInfo.example.length > 0) {
-      const examplePath = getRelativePathFromUrl(grammarInfo.example[0]);
-      if (examplePath) {
-          const grammarBaseDir = path.dirname(parserPath || lexerPath || '');
-          const fullExamplePath = path.join(grammarBaseDir, 'examples', examplePath);
-          try {
-            const res = await fetch(`${BASE_URL}${fullExamplePath}`);
-            if (res.ok) {
-                inputContent = await res.text();
-            } else {
-                console.warn(`Could not fetch example file: ${fullExamplePath}`);
-            }
-          } catch (e) {
-            console.error(`Error fetching example file: ${e}`);
-          }
+      const examplePath = grammarInfo.example[0];
+      const grammarBaseUrl = path.dirname(grammarInfo.parser || grammarInfo.lexer || '');
+      // Examples in grammars.json are relative to the grammar file, not the root.
+      // Construct the full URL for the example file.
+      const fullExampleUrl = new URL(path.join('examples', examplePath), grammarBaseUrl + '/').toString();
+      try {
+        const res = await fetch(fullExampleUrl);
+        if (res.ok) {
+            inputContent = await res.text();
+        } else {
+            console.warn(`Could not fetch example file: ${fullExampleUrl}`);
+        }
+      } catch (e) {
+        console.error(`Error fetching example file: ${e}`);
       }
   }
 
