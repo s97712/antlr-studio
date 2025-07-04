@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:debug": "playwright test --headed"
   },
   "dependencies": {
     "@codemirror/commands": "^6.8.1",

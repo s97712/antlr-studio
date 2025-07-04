@@ -6,9 +6,9 @@ interface ParseResult {
 }
 
 export async function parseInput(
-  grammars: { fileName: string; content: string }[], 
-  input: string, 
-  mainGrammarName: string, 
+  grammars: { fileName: string; content: string }[],
+  input: string,
+  mainGrammarName: string,
   startRuleName: string
 ): Promise<ParseResult> {
   const errors: string[] = [];

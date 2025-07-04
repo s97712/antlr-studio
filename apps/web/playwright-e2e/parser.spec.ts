@@ -3,21 +3,15 @@ import { test, expect } from '@playwright/test';
 test.describe('ANTLR Playground E2E', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // 监听浏览器控制台输出
+    page.on('console', msg => {
+      const location = msg.location();
+      console.log(`[Browser Console] ${msg.type()}: ${msg.text()} at: ${location.url}:${location.lineNumber}:${location.columnNumber}`);
+    });
     await expect(page.locator('.app-container')).toBeVisible();
   });
 
   test('should successfully trigger compilation with valid grammar', async ({ page }) => {
-    // 监听浏览器控制台输出
-    page.on('console', msg => console.log(`[Browser Console] ${msg.type()}: ${msg.text()}`));
-
-    // 在编辑器中输入语法
-    await page.locator('.editor-container .editor-panel .cm-content').first().fill(`grammar Hello;
-    r  : 'hello' ID ;
-    ID : [a-z]+ ;
-    WS : [ \\t\\r\\n]+ -> skip;`);
-    
-    // 填充起始规则
-    await page.locator('[aria-label="输入起始规则"]').fill('prog');
 
     // 点击解析按钮
     await page.getByRole('button', { name: '解析语法' }).click();
