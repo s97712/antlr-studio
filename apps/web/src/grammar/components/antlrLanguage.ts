@@ -1,91 +1,132 @@
-import { StreamLanguage, type StreamParser } from "@codemirror/language";
-import { InputStream, Token } from 'antlr4';
+import antlr4 from 'antlr4';
 import ANTLRv4Lexer from '../generated/ANTLRv4Lexer';
+import { tags } from '@lezer/highlight';
+import { StreamLanguage, type StreamParser } from '@codemirror/language';
+import type { Tag } from '@lezer/highlight';
 
-// A map from token types to CSS class names
-const tokenTypeToClass: { [key: number]: string } = {
-  [ANTLRv4Lexer.TOKEN_REF]: "variableName",
-  [ANTLRv4Lexer.RULE_REF]: "typeName",
-  [ANTLRv4Lexer.LEXER_CHAR_SET]: "string",
-  [ANTLRv4Lexer.DOC_COMMENT]: "comment",
-  [ANTLRv4Lexer.BLOCK_COMMENT]: "comment",
-  [ANTLRv4Lexer.LINE_COMMENT]: "comment",
-  [ANTLRv4Lexer.INT]: "number",
-  [ANTLRv4Lexer.STRING_LITERAL]: "string",
-  [ANTLRv4Lexer.UNTERMINATED_STRING_LITERAL]: "invalid",
-  [ANTLRv4Lexer.BEGIN_ARGUMENT]: "meta",
-  [ANTLRv4Lexer.ACTION]: "meta",
-  [ANTLRv4Lexer.OPTIONS]: "keyword",
-  [ANTLRv4Lexer.TOKENS]: "keyword",
-  [ANTLRv4Lexer.CHANNELS]: "keyword",
-  [ANTLRv4Lexer.IMPORT]: "keyword",
-  [ANTLRv4Lexer.FRAGMENT]: "keyword",
-  [ANTLRv4Lexer.LEXER]: "keyword",
-  [ANTLRv4Lexer.PARSER]: "keyword",
-  [ANTLRv4Lexer.GRAMMAR]: "keyword",
-  [ANTLRv4Lexer.PROTECTED]: "keyword",
-  [ANTLRv4Lexer.PUBLIC]: "keyword",
-  [ANTLRv4Lexer.PRIVATE]: "keyword",
-  [ANTLRv4Lexer.RETURNS]: "keyword",
-  [ANTLRv4Lexer.LOCALS]: "keyword",
-  [ANTLRv4Lexer.THROWS]: "keyword",
-  [ANTLRv4Lexer.CATCH]: "keyword",
-  [ANTLRv4Lexer.FINALLY]: "keyword",
-  [ANTLRv4Lexer.MODE]: "keyword",
-  [ANTLRv4Lexer.COLON]: "punctuation",
-  [ANTLRv4Lexer.COLONCOLON]: "punctuation",
-  [ANTLRv4Lexer.COMMA]: "punctuation",
-  [ANTLRv4Lexer.SEMI]: "punctuation",
-  [ANTLRv4Lexer.LPAREN]: "paren",
-  [ANTLRv4Lexer.RPAREN]: "paren",
-  [ANTLRv4Lexer.RBRACE]: "brace",
-  [ANTLRv4Lexer.RARROW]: "operator",
-  [ANTLRv4Lexer.LT]: "operator",
-  [ANTLRv4Lexer.GT]: "operator",
-  [ANTLRv4Lexer.ASSIGN]: "operator",
-  [ANTLRv4Lexer.QUESTION]: "operator",
-  [ANTLRv4Lexer.STAR]: "operator",
-  [ANTLRv4Lexer.PLUS_ASSIGN]: "operator",
-  [ANTLRv4Lexer.PLUS]: "operator",
-  [ANTLRv4Lexer.OR]: "operator",
-  [ANTLRv4Lexer.DOLLAR]: "operator",
-  [ANTLRv4Lexer.RANGE]: "operator",
-  [ANTLRv4Lexer.DOT]: "operator",
-  [ANTLRv4Lexer.AT]: "meta",
-  [ANTLRv4Lexer.POUND]: "meta",
-  [ANTLRv4Lexer.NOT]: "operator",
-  [ANTLRv4Lexer.ID]: "variableName",
-};
+interface TokenInfo {
+  tokenName: string;
+  text: string;
+  type: number;
+  startIndex: number;
+  stopIndex: number;
+}
 
-const antlrStreamParser: StreamParser<null> = {
-  startState() {
-    return null;
+interface AntlrStreamState {
+  inBlockComment: boolean;
+  // We could add more state here if needed, e.g., for multi-line strings
+}
+
+const tokenCache = new Map<string, TokenInfo[]>();
+
+function getTokensForText(text: string): TokenInfo[] {
+  if (tokenCache.has(text)) {
+    return tokenCache.get(text)!;
+  }
+
+  const chars = new antlr4.CharStream(text);
+  const lexer = new ANTLRv4Lexer(chars);
+  
+  const allTokens: any[] = [];
+  let token = lexer.nextToken();
+  while (token.type !== antlr4.Token.EOF) {
+    allTokens.push(token);
+    token = lexer.nextToken();
+  }
+
+  const tokens = allTokens.map((token: any) => {
+    return {
+      tokenName: (ANTLRv4Lexer as any).symbolicNames[token.type] || '',
+      text: token.text || '',
+      type: token.type,
+      startIndex: token.start,
+      stopIndex: token.stop,
+    };
+  });
+
+  tokenCache.set(text, tokens);
+  return tokens;
+}
+
+function getStyleNameByTag(tag: Tag): string {
+  for (const t in tags) {
+    if ((tags as any)[t] === tag) {
+      return t;
+    }
+  }
+  return '';
+}
+
+const antlrStreamParser: StreamParser<AntlrStreamState> = {
+  startState: (): AntlrStreamState => {
+    return {
+      inBlockComment: false,
+    };
   },
 
-  token(stream) {
-    // Create a new lexer for the entire stream content
-    // @ts-ignore
-    const lexer = new ANTLRv4Lexer(new InputStream(stream.string));
-    let token;
+  token: (stream, state) => {
+    if (state.inBlockComment) {
+      // We are inside a block comment, look for the closing tag
+      const closingMatch = stream.match(/.*?\*\//);
+      if (closingMatch) {
+        state.inBlockComment = false; // End of comment
+      } else {
+        stream.skipToEnd(); // The rest of the line is a comment
+      }
+      return getStyleNameByTag(tags.blockComment);
+    }
 
-    // Advance the lexer until the stream's current position
-    while ((token = lexer.nextToken()).type !== Token.EOF) {
-      if (token.start >= stream.pos) {
-        break;
+    // If not in a block comment, get tokens for the current line
+    const tokens = getTokensForText(stream.string);
+    const nextToken = tokens.find((t) => t.startIndex >= stream.pos);
+
+    if (nextToken && nextToken.text && stream.match(nextToken.text)) {
+      if (nextToken.type === ANTLRv4Lexer.BLOCK_COMMENT) {
+        if (!nextToken.text.endsWith('*/')) {
+          state.inBlockComment = true;
+        }
+      }
+      
+      switch (nextToken.type) {
+        case ANTLRv4Lexer.DOC_COMMENT:
+        case ANTLRv4Lexer.BLOCK_COMMENT:
+        case ANTLRv4Lexer.LINE_COMMENT:
+          return getStyleNameByTag(tags.comment);
+        case ANTLRv4Lexer.STRING_LITERAL:
+          return getStyleNameByTag(tags.string);
+        case ANTLRv4Lexer.INT:
+          return getStyleNameByTag(tags.number);
+        case ANTLRv4Lexer.LEXER:
+        case ANTLRv4Lexer.PARSER:
+        case ANTLRv4Lexer.GRAMMAR:
+        case ANTLRv4Lexer.IMPORT:
+        case ANTLRv4Lexer.FRAGMENT:
+        case ANTLRv4Lexer.MODE:
+        case ANTLRv4Lexer.RETURNS:
+        case ANTLRv4Lexer.LOCALS:
+        case ANTLRv4Lexer.THROWS:
+        case ANTLRv4Lexer.CATCH:
+        case ANTLRv4Lexer.FINALLY:
+        case ANTLRv4Lexer.OPTIONS:
+        case ANTLRv4Lexer.TOKENS:
+        case ANTLRv4Lexer.CHANNELS:
+          return getStyleNameByTag(tags.keyword);
+        case ANTLRv4Lexer.TOKEN_REF:
+          return getStyleNameByTag(tags.typeName);
+        case ANTLRv4Lexer.RULE_REF:
+          return getStyleNameByTag(tags.variableName);
+        default:
+          return null;
       }
     }
 
-    // If we found a token at the current position, style it
-    if (token && token.start === stream.pos) {
-      // Advance the stream by the length of the token
-      stream.pos += token.text?.length || 0;
-      return tokenTypeToClass[token.type] || null;
-    }
-
-    // If no token is found at the current position, advance the stream by one character
     stream.next();
     return null;
   },
+
+  copyState: (state: AntlrStreamState): AntlrStreamState => {
+    return { ...state };
+  }
 };
 
 export const antlrLanguage = StreamLanguage.define(antlrStreamParser);
