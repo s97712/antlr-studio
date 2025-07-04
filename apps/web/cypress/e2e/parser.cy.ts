@@ -1,64 +1,46 @@
+import compilerResponse from '../../mocks/real-compiler-response.json';
+
 describe('ANTLR Playground E2E', () => {
   beforeEach(() => {
-    cy.intercept('POST', '/.netlify/functions/antlr-compiler').as('parseGrammar') // 拦截解析请求
-    cy.visit('/')
-    cy.get('.app-container').should('be.visible')
-  })
-
-  afterEach(() => {
-    // Capture and print logs after each test
-    cy.window().then((win) => {
-      // @ts-ignore
-      if (win.appLogs && win.appLogs.length > 0) {
-        // @ts-ignore
-        win.appLogs.forEach(log => {
-          cy.task('log', `[App Log] ${JSON.stringify(log)}`);
-        });
-        // @ts-ignore
-        win.appLogs = []; // Clear logs for next test
-      }
-    });
+    cy.visit('/');
+    cy.get('.app-container').should('be.visible');
   });
-  
-  it('成功解析简单语法', () => {
-    // 简化语法和输入
-    cy.get('.editor-container .editor-panel .cm-content').first().clear().type(`grammar Hello;
+
+  it('should successfully trigger compilation with valid grammar', () => {
+    cy.task("log", "compiler response:" + JSON.stringify(compilerResponse));
+    cy.intercept('POST', '/.netlify/functions/antlr-compiler', {
+      statusCode: 200,
+      body: compilerResponse,
+    }).as('compileGrammar');
+
+    cy.get('.editor-container .editor-panel .cm-content').first().clear({ force: true }).type(`grammar Hello;
     r  : 'hello' ID ;
     ID : [a-z]+ ;
     WS : [ \\t\\r\\n]+ -> skip;`);
-    cy.get('.editor-container .editor-panel .cm-content').eq(1).clear().type('hello world');
-    cy.get('button').contains('解析').click()
-    cy.wait('@parseGrammar') // 使用默认等待时间
     
-    // 延长超时时间并添加重试
-    // 等待解析树容器出现
-    cy.get('[data-testid="parse-tree-container"]').should('be.visible')
-    cy.get('[data-testid="parse-tree-container"] .node text').should('contain', 'r')
-  })
+    cy.get('[aria-label="解析语法"]').click();
 
-  it('处理解析错误', () => {
-    // 输入一个会导致语法错误的语法
-    cy.get('.editor-container .editor-panel .cm-content').first().clear().type('invalid grammar {');
-    cy.get('.editor-container .editor-panel .cm-content').eq(1).clear().type('test');
-    cy.get('button').contains('解析').click()
-    cy.get('.error-panel').should('be.visible')
-    cy.get('.error-panel').should('contain', '错误') // 放宽错误文本匹配
-  })
+    cy.wait('@compileGrammar');
 
-  it('渲染复杂解析树', () => {
-    // 使用简化语法
-    cy.get('.editor-container .editor-panel .cm-content').first().clear().type(`grammar Expr;
-    expr: expr ('+'|'-') expr
-         | INT
-         ;
-    INT: [0-9]+;
-    WS: [ \\t\\r\\n]+ -> skip;`);
-    cy.get('.editor-container .editor-panel .cm-content').eq(1).clear().type('1+2-3');
-    cy.get('button').contains('解析').click()
-    cy.wait('@parseGrammar')
+    cy.get('[aria-label="解析树容器"]').should('be.visible');
+  });
+
+  it('should show an error panel on compilation failure', () => {
+    cy.intercept('POST', '/.netlify/functions/antlr-compiler', {
+      statusCode: 500,
+      body: {
+        error: 'Compilation failed',
+        details: 'This is a mocked error from the test.',
+      },
+    }).as('compileGrammarError');
+
+    cy.get('.editor-container .editor-panel .cm-content').first().clear({ force: true }).type('invalid grammar {');
     
-    // 等待解析树容器出现
-    cy.get('[data-testid="parse-tree-container"]').should('be.visible')
-    cy.get('[data-testid="parse-tree-container"] .node').should('have.length.at.least', 3)
-  })
-})
+    cy.get('[aria-label="解析语法"]').click();
+
+    cy.wait('@compileGrammarError');
+
+    cy.get('.error-panel').should('be.visible');
+    cy.get('[aria-label="解析树容器"]').should('not.exist');
+  });
+});

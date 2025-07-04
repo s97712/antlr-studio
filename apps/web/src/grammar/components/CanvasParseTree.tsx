@@ -157,9 +157,10 @@ const CanvasParseTree: React.FC<CanvasParseTreeProps> = ({ data, isDarkMode }) =
   }, [data, focusOnNode, draw]);
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       style={{ width: '100%', height: '100%', position: 'relative', background: isDarkMode ? '#1A202C' : '#FFFFFF' }}
+      aria-label="解析树容器"
     >
       <canvas
         ref={canvasRef}

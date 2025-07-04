@@ -5,14 +5,14 @@ import EditorPanel from './components/EditorPanel';
 import D3ParseTree from './grammar/components/D3ParseTree';
 import CanvasParseTree from './grammar/components/CanvasParseTree';
 import type { TreeNode } from './grammar/parser/treeConverter';
-import { useDarkMode } from './hooks/useDarkMode'; // 导入自定义 Hook
+import { useDarkMode } from './hooks/useDarkMode';
 import {
   fetchGrammarList,
   loadGrammarContents,
   runParser,
   type GrammarInfo,
   type GrammarFiles
-} from './services/grammarService'; // 导入服务
+} from './services/grammarService';
 
 type UIState = 'INITIAL_LOADING' | 'IDLE' | 'PARSING' | 'LOADING_GRAMMAR';
 
@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [errors, setErrors] = useState<string[]>([]);
   const [grammarsList, setGrammarsList] = useState<GrammarInfo[]>([]);
   const [selectedGrammar, setSelectedGrammar] = useState<string>('');
-  const [isDarkMode, toggleDarkMode] = useDarkMode(); // 使用自定义 Hook
+  const [isDarkMode, toggleDarkMode] = useDarkMode();
   const [renderMode, setRenderMode] = useState<'svg' | 'canvas'>('canvas');
   const [uiState, setUiState] = useState<UIState>('INITIAL_LOADING');
   const [startRule, setStartRule] = useState<string>('');
@@ -89,8 +89,25 @@ const App: React.FC = () => {
     setUiState('PARSING');
     
     try {
-      const vt = await runParser(currentGrammarFiles.allGrammars, input, currentGrammarFiles.mainGrammar, startRule);
-      setVisualTree(vt);
+      const updatedGrammarFiles: GrammarFiles = {
+        ...currentGrammarFiles,
+        lexerContent: lexerGrammar,
+        parserContent: parserGrammar,
+        allGrammars: currentGrammarFiles.allGrammars.map(g => {
+          if (g.fileName === currentGrammarFiles.mainGrammar) {
+            return { ...g, content: parserGrammar };
+          }
+          if (g.fileName.endsWith('Lexer.g4')) {
+            return { ...g, content: lexerGrammar };
+          }
+          return g;
+        })
+      };
+      const result = await runParser(updatedGrammarFiles.allGrammars, input, updatedGrammarFiles.mainGrammar, startRule);
+      setVisualTree(result.tree);
+      if (result.errors.length > 0) {
+        setErrors(result.errors);
+      }
     } catch (error) {
       console.error('解析失败:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -101,7 +118,7 @@ const App: React.FC = () => {
   };
   
   return (
-    <div className="app-container">
+    <main className="app-container">
       <PanelGroup direction="vertical">
         <Panel defaultSize={60} minSize={30}>
           <PanelGroup direction="horizontal">
@@ -153,13 +170,14 @@ const App: React.FC = () => {
         
         <Panel defaultSize={40} minSize={20}>
           <div className="visualization-container">
-            <div className="toolbar">
+            <div className="toolbar" role="toolbar">
               <select
                 value={selectedGrammar}
                 onChange={(e) => {
                   const selected = grammarsList.find(g => g.name === e.target.value);
                   handleSelectGrammar(selected);
                 }}
+                aria-label="选择预置语法"
               >
                 {grammarsList.map(g => (
                   <option key={g.name} value={g.name}>{g.name}</option>
@@ -171,14 +189,24 @@ const App: React.FC = () => {
                   onChange={(e) => setStartRule(e.target.value)}
                   placeholder="Start Rule"
                   className="start-rule-input"
+                  aria-label="输入起始规则"
               />
-              <button onClick={handleParse} data-testid="parse-button" disabled={uiState !== 'IDLE'}>
+              <button
+                onClick={handleParse}
+                data-testid="parse-button"
+                disabled={uiState !== 'IDLE'}
+                aria-label="解析语法"
+              >
                 解析
               </button>
-              <button onClick={toggleDarkMode}>
+              <button onClick={toggleDarkMode} aria-label="切换颜色模式">
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
               </button>
-              <button onClick={() => setRenderMode(renderMode === 'svg' ? 'canvas' : 'svg')} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ml-2">
+              <button
+                onClick={() => setRenderMode(renderMode === 'svg' ? 'canvas' : 'svg')}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ml-2"
+                aria-label="切换解析树渲染引擎"
+              >
                 切换到 {renderMode === 'svg' ? 'Canvas' : 'SVG'} 渲染
               </button>
             </div>
@@ -191,7 +219,7 @@ const App: React.FC = () => {
                 ))}
               </div>
             )}
-            <div data-testid="parse-tree-container" style={{ flex: 1, height: 0 }} >
+            <div style={{ flex: 1, height: 0 }} >
               {uiState === 'INITIAL_LOADING' && <div>应用加载中...</div>}
               {uiState === 'LOADING_GRAMMAR' && <div>加载语法中...</div>}
               {uiState === 'PARSING' && <div>解析树加载中...</div>}
@@ -207,7 +235,7 @@ const App: React.FC = () => {
           </div>
         </Panel>
       </PanelGroup>
-    </div>
+    </main>
   );
 };
 

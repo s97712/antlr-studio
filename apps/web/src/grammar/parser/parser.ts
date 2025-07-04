@@ -29,10 +29,13 @@ export async function parseInput(
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(`后端编译失败: ${errorData.error || response.statusText}`);
+    console.log('Backend compilation error data:', errorData); // Log the full error object
+    const errorMessage = `后端编译失败: ${errorData.details || errorData.error || response.statusText}`;
+    // 返回一个包含错误信息的对象，而不是抛出异常
+    return { tree: null, errors: [errorMessage] };
   }
 
-  const responseData = await response.json();
+    const responseData = await response.json();
   const files: { fileName: string; content: string }[] = responseData.files.map((f: { name: string; content: string }) => ({ fileName: f.name, content: f.content }));
 
   // 2. 动态加载解析器

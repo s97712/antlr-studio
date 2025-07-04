@@ -213,11 +213,13 @@ const D3ParseTree: React.FC<D3ParseTreeProps> = ({ data, isDarkMode }) => {
   }, [isDarkMode]);
 
   return (
-    <div style={{ width: '100%', height: '100%', background: isDarkMode ? '#1A202C' : '#FFFFFF' }}>
+    <div
+      style={{ width: '100%', height: '100%', background: isDarkMode ? '#1A202C' : '#FFFFFF' }}
+      aria-label="解析树容器"
+    >
       <svg ref={svgRef} style={{ width: "100%", height: "100%" }}></svg>
     </div>
   );
 };
 
 export default D3ParseTree;
-

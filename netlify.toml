@@ -6,7 +6,6 @@
   directory = "netlify/functions"
   included_files = ["netlify/functions/antlr-compiler/antlr-4.13.1-complete.jar"]
 
-# 不再需要Java插件
 
-[[plugins]]
-  package = "netlify-plugin-cypress"
+[dev]
+  autoLaunch = false

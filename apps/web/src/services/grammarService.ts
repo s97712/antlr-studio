@@ -139,9 +139,10 @@ export const runParser = async (
   input: string,
   mainGrammar: string,
   startRule: string
-): Promise<TreeNode | null> => {
-  const tree = await parseInput(grammars, input, mainGrammar, startRule);
-  return convertTree(tree.tree);
+): Promise<{ tree: TreeNode | null; errors: string[] }> => {
+  const result = await parseInput(grammars, input, mainGrammar, startRule);
+  const tree = result.tree ? convertTree(result.tree) : null;
+  return { tree, errors: result.errors };
 };
 
 // Helper to get path module functionality in the browser
