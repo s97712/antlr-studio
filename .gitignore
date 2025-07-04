@@ -36,3 +36,5 @@ Thumbs.db
 .roo
 generated
 apps/web/public/pre-filled-grammars/
+
+test-results/

@@ -22,7 +22,7 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["cypress"]
+    "types": ["@playwright/test"]
   },
-  "include": ["src", "cypress/**/*.ts"]
+  "include": ["src", "playwright/**/*.ts"]
 }

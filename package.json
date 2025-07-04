@@ -4,14 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test:api": "cross-env PORT=8889 start-server-and-test \"pnpm run dev:api\" http://localhost:{{PORT}}/.netlify/functions/ping test:e2e",
-    "test:e2e": "cypress run",
     "dev": "concurrently \"pnpm run dev:web\" \"pnpm run dev:api\"",
     "dev:web": "cd apps/web && pnpm run dev",
-    "dev:api": "node scripts/fuck-netlify.mjs",
-    "generate:mocks": "node scripts/fetch-compiler-response.js",
-    "build:highlight": "java -jar netlify/functions/antlr-compiler/antlr-4.13.1-complete.jar -Dlanguage=TypeScript -o apps/web/src/grammar/generated -visitor -lib apps/web/src/grammar/grammars apps/web/src/grammar/grammars/ANTLRv4Lexer.g4 apps/web/src/grammar/grammars/ANTLRv4Parser.g4",
-    "clean:generated": "rm -f apps/web/src/grammar/generated/*"
+    "dev:api": "netlify dev",
+    "test": "playwright test",
+    "build:highlight": "java -jar netlify/functions/antlr-compiler/antlr-4.13.1-complete.jar -Dlanguage=TypeScript -o apps/web/src/grammar/generated -visitor -lib apps/web/src/grammar/grammars apps/web/src/grammar/grammars/ANTLRv4Lexer.g4 apps/web/src/grammar/grammars/ANTLRv4Parser.g4"
   },
   "keywords": [],
   "author": "",
@@ -19,11 +16,11 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240403.0",
     "@netlify/functions": "^4.1.6",
+    "@playwright/test": "^1.53.2",
     "@stagewise/toolbar": "^0.4.9",
     "@types/d3-flextree": "^2.1.4",
     "@types/node": "^24.0.3",
     "concurrently": "^8.2.2",
-    "cypress": "^13.13.1",
     "netlify-cli": "^22.1.3",
     "typescript": "^5.8.3"
   },

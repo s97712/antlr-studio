@@ -9,13 +9,13 @@
 ### 后端测试
 
 ```bash
-pnpm test:api
+pnpm test
 ```
 
 ### 前端测试
 
 ```bash
-pnpm test:web
+(cd apps/web && pnpm test)
 ```
 
 ## AI 调试指南
@@ -28,4 +28,4 @@ pnpm test:web
     *   后端服务端口: `8888`
 
 > **重要提示:**
-> 当测试环境（例如由 AI 助手控制的 Playwright）在 Docker 容器内运行时，访问前端应用必须使用 `http://host.docker.internal` 作为主机名，而非 `localhost`。例如：`http://host.docker.internal:8888`。
+> 当测试环境（例如由 AI 助手控制的 Playwright）在 Docker 容器内运行时，访问前端应用必须使用 `http://host.docker.internal` 作为主机名，而非 `localhost`。例如：`http://host.docker.internal:5175`。
