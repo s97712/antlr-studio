@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import EditorPanel from './components/EditorPanel';
-import D3ParseTree from './grammar/components/D3ParseTree';
 import CanvasParseTree from './grammar/components/CanvasParseTree';
 import type { TreeNode } from './grammar/parser/treeConverter';
 import { useDarkMode } from './hooks/useDarkMode';
@@ -12,7 +11,11 @@ import {
   loadGrammarContents,
   runParser,
   type GrammarInfo,
-  type GrammarFiles
+  type GrammarFiles,
+  saveCustomGrammar,
+  renameCustomGrammar,
+  deleteCustomGrammar,
+  type CustomGrammar,
 } from './services/grammarService';
 
 type UIState = 'INITIAL_LOADING' | 'IDLE' | 'PARSING' | 'LOADING_GRAMMAR';
@@ -26,19 +29,109 @@ const App: React.FC = () => {
   const [grammarsList, setGrammarsList] = useState<GrammarInfo[]>([]);
   const [selectedGrammar, setSelectedGrammar] = useState<string>('');
   const [isDarkMode, toggleDarkMode] = useDarkMode();
-  const [renderMode, setRenderMode] = useState<'svg' | 'canvas'>('canvas');
   const [uiState, setUiState] = useState<UIState>('INITIAL_LOADING');
   const [startRule, setStartRule] = useState<string>('');
   const [currentGrammarFiles, setCurrentGrammarFiles] = useState<GrammarFiles | null>(null);
+  const [originalGrammarContent, setOriginalGrammarContent] = useState({ parser: '', lexer: '' });
+
+  const refreshGrammarList = async () => {
+    try {
+      const data = await fetchGrammarList();
+      setGrammarsList(data);
+      return data;
+    } catch (error) {
+      console.error("获取语法索引失败:", error);
+      setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
+      return [];
+    }
+  };
+
+  const handleSaveGrammar = async (grammar: CustomGrammar) => {
+    await saveCustomGrammar(grammar);
+    const updatedList = await refreshGrammarList();
+    const newGrammar = updatedList.find(g => g.name === grammar.name);
+    if (newGrammar) {
+      handleSelectGrammar(newGrammar);
+    }
+  };
+
+  const handleRenameGrammar = async () => {
+    const oldGrammar = grammarsList.find(g => g.name === selectedGrammar);
+    if (!oldGrammar || !oldGrammar.isCustom) return;
+
+    const newName = prompt('Enter new name for the grammar:', oldGrammar.name);
+    if (newName && newName !== oldGrammar.name) {
+      await renameCustomGrammar(oldGrammar.name, newName);
+      const updatedList = await refreshGrammarList();
+      const renamedGrammar = updatedList.find(g => g.name === newName);
+      if (renamedGrammar) {
+        handleSelectGrammar(renamedGrammar);
+      }
+    }
+  };
+
+  const handleForkGrammar = async () => {
+    if (!selectedGrammar || !currentGrammarFiles) return;
+    const grammarToFork = grammarsList.find(g => g.name === selectedGrammar);
+    if (!grammarToFork) return;
+
+    // Find the base name (e.g., "JSON" from "JSON-1")
+    const baseNameMatch = grammarToFork.name.match(/^(.*)-(\d+)$/);
+    const baseName = baseNameMatch ? baseNameMatch[1] : grammarToFork.name;
+
+    // Find the highest existing fork number for this base name
+    let maxForkNum = 0;
+    const forkRegex = new RegExp(`^${baseName}-(\\d+)$`);
+    grammarsList.forEach(g => {
+      const match = g.name.match(forkRegex);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxForkNum) {
+          maxForkNum = num;
+        }
+      }
+    });
+    const newForkNum = maxForkNum + 1;
+    const newName = `${baseName}-${newForkNum}`;
+
+    const forkedGrammar: CustomGrammar = {
+      ...grammarToFork,
+      name: newName,
+      url: `local:${newName}`,
+      files: {
+        parserContent: currentGrammarFiles.parserContent,
+        lexerContent: currentGrammarFiles.lexerContent,
+      },
+      example: [currentGrammarFiles.inputContent],
+      isCustom: true,
+    };
+
+    await saveCustomGrammar(forkedGrammar);
+    const updatedList = await refreshGrammarList();
+    const newGrammar = updatedList.find(g => g.name === forkedGrammar.name);
+    if (newGrammar) {
+      handleSelectGrammar(newGrammar);
+    }
+  };
+
+  const handleDeleteGrammar = async () => {
+    const grammarToDelete = grammarsList.find(g => g.name === selectedGrammar);
+    if (!grammarToDelete || !grammarToDelete.isCustom) return;
+
+    if (window.confirm(`Are you sure you want to delete "${grammarToDelete.name}"?`)) {
+      await deleteCustomGrammar(grammarToDelete.name);
+      const updatedList = await refreshGrammarList();
+      const firstSelectable = updatedList.find(g => g.url !== 'separator');
+      await handleSelectGrammar(firstSelectable);
+    }
+  };
 
   const handleSelectGrammar = (grammarInfo: GrammarInfo | undefined) => {
-    if (!grammarInfo) return;
+    if (!grammarInfo || grammarInfo.url === 'separator') return;
 
-    // Immediately update the selected grammar to reflect in the UI
     setSelectedGrammar(grammarInfo.name);
     setUiState('LOADING_GRAMMAR');
 
-    // Fetch and update the rest of the state asynchronously
     loadGrammarContents(grammarInfo).then(files => {
       setCurrentGrammarFiles(files);
       setParserGrammar(files.parserContent);
@@ -48,6 +141,11 @@ const App: React.FC = () => {
       setVisualTree(null);
       setErrors([]);
       setUiState('IDLE');
+      if (grammarInfo.isCustom) {
+        setOriginalGrammarContent({ parser: files.parserContent, lexer: files.lexerContent });
+      } else {
+        setOriginalGrammarContent({ parser: '', lexer: '' }); // Not a custom grammar, so nothing to save
+      }
     }).catch(error => {
       console.error("加载预置语法失败:", error);
       setErrors([`加载预置语法 '${grammarInfo.name}' 失败`]);
@@ -58,13 +156,13 @@ const App: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const data = await fetchGrammarList();
-        setGrammarsList(data);
-        if (data.length > 0) {
-          await handleSelectGrammar(data[0]);
+        const grammars = await refreshGrammarList();
+        if (grammars.length > 0) {
+          const firstSelectable = grammars.find(g => g.url !== 'separator');
+          await handleSelectGrammar(firstSelectable);
         }
       } catch (error) {
-        console.error("获取语法索引失败:", error);
+        console.error("初始化失败:", error);
         setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
       } finally {
         setUiState('IDLE');
@@ -92,21 +190,37 @@ const App: React.FC = () => {
     setUiState('PARSING');
     
     try {
-      const updatedGrammarFiles: GrammarFiles = {
-        ...currentGrammarFiles,
-        lexerContent: lexerGrammar,
-        parserContent: parserGrammar,
-        allGrammars: currentGrammarFiles.allGrammars.map(g => {
+      let filesToParse = currentGrammarFiles.allGrammars;
+      const currentGrammar = grammarsList.find(g => g.name === selectedGrammar);
+
+      if (currentGrammar?.isCustom) {
+        filesToParse = [
+          { fileName: currentGrammar.parser || 'parser.g4', content: parserGrammar },
+          { fileName: currentGrammar.lexer || 'lexer.g4', content: lexerGrammar }
+        ].filter(f => f.content); // Filter out empty lexer
+      } else {
+         filesToParse = currentGrammarFiles.allGrammars.map(g => {
           if (g.fileName === currentGrammarFiles.mainGrammar) {
             return { ...g, content: parserGrammar };
           }
+          // This logic might be flawed for non-custom grammars if lexer name isn't standard
           if (g.fileName.endsWith('Lexer.g4')) {
             return { ...g, content: lexerGrammar };
           }
           return g;
-        })
-      };
-      const result = await runParser(updatedGrammarFiles.allGrammars, input, updatedGrammarFiles.mainGrammar, startRule);
+        });
+      }
+
+      const mainGrammarFile = filesToParse.find(f => f.fileName === currentGrammarFiles.mainGrammar)?.fileName || filesToParse[0].fileName;
+
+      // Ensure file names are just basenames, not full paths/URLs
+      const sanitizedFilesToParse = filesToParse.map(f => ({
+        ...f,
+        fileName: f.fileName.split('/').pop()!
+      }));
+      const sanitizedMainGrammarFile = mainGrammarFile.split('/').pop()!;
+
+      const result = await runParser(sanitizedFilesToParse, input, sanitizedMainGrammarFile, startRule);
       setVisualTree(result.tree);
       if (result.errors.length > 0) {
         setErrors(result.errors);
@@ -171,7 +285,7 @@ const App: React.FC = () => {
           <div className="visualization-container">
             <div className="toolbar" role="toolbar">
               <SearchableSelect
-                options={grammarsList.map(g => ({ value: g.name, name: g.name }))}
+                options={grammarsList.map(g => ({ value: g.name, name: g.name, isSeparator: g.url === 'separator' }))}
                 value={selectedGrammar}
                 onChange={(value) => {
                   const selected = grammarsList.find(g => g.name === value);
@@ -179,6 +293,42 @@ const App: React.FC = () => {
                 }}
                 aria-label="选择预置语法"
               />
+              {selectedGrammar && <button onClick={handleForkGrammar}>Fork</button>}
+              <button
+                onClick={handleRenameGrammar}
+                disabled={!grammarsList.find(g => g.name === selectedGrammar)?.isCustom}
+              >
+                Rename
+              </button>
+              <button
+                onClick={handleDeleteGrammar}
+                disabled={!grammarsList.find(g => g.name === selectedGrammar)?.isCustom}
+              >
+                Delete
+              </button>
+              <button
+                onClick={async () => {
+                  const currentGrammar = grammarsList.find(g => g.name === selectedGrammar) as CustomGrammar;
+                  if (currentGrammar) {
+                    const updatedGrammar = {
+                      ...currentGrammar,
+                      files: {
+                        parserContent: parserGrammar,
+                        lexerContent: lexerGrammar,
+                      },
+                      example: [input],
+                    };
+                    await saveCustomGrammar(updatedGrammar);
+                    setOriginalGrammarContent({ parser: parserGrammar, lexer: lexerGrammar });
+                  }
+                }}
+                disabled={
+                  !grammarsList.find(g => g.name === selectedGrammar)?.isCustom ||
+                  (parserGrammar === originalGrammarContent.parser && lexerGrammar === originalGrammarContent.lexer)
+                }
+              >
+                Save
+              </button>
               <input
                   type="text"
                   value={startRule}
@@ -198,13 +348,6 @@ const App: React.FC = () => {
               <button onClick={toggleDarkMode} aria-label="切换颜色模式">
                 切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
               </button>
-              <button
-                onClick={() => setRenderMode(renderMode === 'svg' ? 'canvas' : 'svg')}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ml-2"
-                aria-label="切换解析树渲染引擎"
-              >
-                切换到 {renderMode === 'svg' ? 'Canvas' : 'SVG'} 渲染
-              </button>
             </div>
             {errors.length > 0 && (
               <div className="error-panel">
@@ -220,11 +363,7 @@ const App: React.FC = () => {
               {uiState === 'LOADING_GRAMMAR' && <div>加载语法中...</div>}
               {uiState === 'PARSING' && <div>解析树加载中...</div>}
               {uiState === 'IDLE' && visualTree && (
-                renderMode === 'svg' ? (
-                  <D3ParseTree data={visualTree} isDarkMode={isDarkMode} />
-                ) : (
                   <CanvasParseTree data={visualTree} isDarkMode={isDarkMode} />
-                )
               )}
               {uiState === 'IDLE' && !visualTree && <div>点击“解析”以生成解析树</div>}
             </div>

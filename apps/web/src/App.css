@@ -200,3 +200,17 @@ body.dark .searchable-select .options-list li {
 body.dark .searchable-select .options-list li:hover {
   background-color: #4a5568;
 }
+
+.searchable-select .options-list .separator {
+  height: 1px;
+  background-color: #ccc;
+  margin: 5px 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+
+.toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

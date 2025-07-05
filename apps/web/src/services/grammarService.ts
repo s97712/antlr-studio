@@ -14,6 +14,19 @@ export interface GrammarInfo {
   start?: string;
   example?: string[];
   imports?: string[];
+  isCustom?: boolean;
+  files?: {
+    parserContent: string;
+    lexerContent: string;
+  };
+}
+
+export interface CustomGrammar extends GrammarInfo {
+  isCustom: true;
+  files: {
+    parserContent: string;
+    lexerContent: string;
+  };
 }
 
 export interface GrammarFiles {
@@ -24,21 +37,97 @@ export interface GrammarFiles {
     allGrammars: { fileName: string; content: string }[];
 }
 
+// --- Local Storage for Custom Grammars ---
+
+const CUSTOM_GRAMMARS_KEY = 'customGrammars';
+
+interface GrammarStorage {
+  getCustomGrammars(): Promise<CustomGrammar[]>;
+  saveCustomGrammar(grammar: CustomGrammar): Promise<void>;
+  renameCustomGrammar(oldName: string, newName: string): Promise<void>;
+  deleteCustomGrammar(grammarName: string): Promise<void>;
+}
+
+class LocalStorageGrammarStorage implements GrammarStorage {
+  async getCustomGrammars(): Promise<CustomGrammar[]> {
+    const stored = localStorage.getItem(CUSTOM_GRAMMARS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  async saveCustomGrammar(grammar: CustomGrammar): Promise<void> {
+    const grammars = await this.getCustomGrammars();
+    const index = grammars.findIndex(g => g.name === grammar.name);
+    if (index > -1) {
+      grammars[index] = grammar;
+    } else {
+      grammars.unshift(grammar);
+    }
+    localStorage.setItem(CUSTOM_GRAMMARS_KEY, JSON.stringify(grammars));
+  }
+
+  async renameCustomGrammar(oldName: string, newName: string): Promise<void> {
+    const grammars = await this.getCustomGrammars();
+    const grammarToRename = grammars.find(g => g.name === oldName);
+    if (grammarToRename) {
+      const updatedGrammar = { ...grammarToRename, name: newName, url: `local:${newName}` };
+      const filteredGrammars = grammars.filter(g => g.name !== oldName);
+      filteredGrammars.unshift(updatedGrammar);
+      localStorage.setItem(CUSTOM_GRAMMARS_KEY, JSON.stringify(filteredGrammars));
+    }
+  }
+
+  async deleteCustomGrammar(grammarName: string): Promise<void> {
+    const grammars = await this.getCustomGrammars();
+    const filteredGrammars = grammars.filter(g => g.name !== grammarName);
+    localStorage.setItem(CUSTOM_GRAMMARS_KEY, JSON.stringify(filteredGrammars));
+  }
+}
+
+const grammarStorage = new LocalStorageGrammarStorage();
+
+export const saveCustomGrammar = async (grammar: CustomGrammar) => {
+  await grammarStorage.saveCustomGrammar(grammar);
+};
+
+export const renameCustomGrammar = async (oldName: string, newName: string) => {
+  await grammarStorage.renameCustomGrammar(oldName, newName);
+};
+
+export const deleteCustomGrammar = async (grammarName: string) => {
+  await grammarStorage.deleteCustomGrammar(grammarName);
+};
+
+
 const BASE_URL = 'https://raw.githubusercontent.com/antlr/grammars-v4/master/';
 
 /**
- * Fetches the list of all available grammars.
+ * Fetches the list of all available grammars, including custom ones.
  */
 export const fetchGrammarList = async (): Promise<GrammarInfo[]> => {
+  const customGrammars = await grammarStorage.getCustomGrammars();
+  
   const response = await fetch(`${BASE_URL}grammars.json`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  return response.json();
+  const remoteGrammars: GrammarInfo[] = await response.json();
+
+  if (customGrammars.length > 0) {
+    const separator: GrammarInfo = {
+      name: '---',
+      description: '',
+      url: 'separator',
+      isCustom: true, // Treat separator as a custom type for filtering/rendering
+    };
+    return [...customGrammars, separator, ...remoteGrammars];
+  }
+
+  return remoteGrammars;
 };
 
 function getRelativePathFromUrl(fileUrl: string | undefined): string | null {
     if (!fileUrl) return null;
+    if (fileUrl.startsWith('local:')) return fileUrl;
     // The URLs in grammars.json are now full URLs, so we just return them.
     // We need to extract the path relative to the new BASE_URL for other logic to work.
     if (fileUrl.startsWith(BASE_URL)) {
@@ -83,6 +172,22 @@ function determineMainGrammar(parserContent: string, lexerContent: string, parse
  * Loads all necessary files for a given grammar.
  */
 export const loadGrammarContents = async (grammarInfo: GrammarInfo): Promise<GrammarFiles> => {
+  if (grammarInfo.isCustom && grammarInfo.files) {
+    const { parserContent, lexerContent } = grammarInfo.files;
+    const mainGrammar = determineMainGrammar(parserContent, lexerContent, grammarInfo.parser || '', grammarInfo.lexer || '');
+    const allGrammars = [
+        { fileName: grammarInfo.parser || 'parser.g4', content: parserContent },
+        { fileName: grammarInfo.lexer || 'lexer.g4', content: lexerContent }
+    ];
+    return {
+        parserContent,
+        lexerContent,
+        inputContent: grammarInfo.example?.[0] || '',
+        mainGrammar,
+        allGrammars
+    };
+  }
+    
   const fetchPromises: Promise<[string, string]>[] = [];
 
   const parserPath = getRelativePathFromUrl(grammarInfo.parser);

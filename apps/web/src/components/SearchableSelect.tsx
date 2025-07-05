@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 interface Option {
   value: string;
   name: string;
+  isSeparator?: boolean;
 }
 
 interface SearchableSelectProps {
@@ -21,7 +22,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({ options, value, onC
   const selectedOptionName = options.find(o => o.value === value)?.name || '';
 
   const filteredOptions = options.filter(option =>
-    option.name.toLowerCase().includes(filterTerm.toLowerCase())
+    option.isSeparator || option.name.toLowerCase().includes(filterTerm.toLowerCase())
   );
 
   const handleSelect = (selectedValue: string) => {
@@ -66,14 +67,19 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({ options, value, onC
       />
       {isOpen && (
         <ul className="options-list">
-          {filteredOptions.map(option => (
-            <li key={option.value} onMouseDown={(e) => {
-              e.preventDefault();
-              handleSelect(option.value);
-            }}>
-              {option.name}
-            </li>
-          ))}
+          {filteredOptions.map(option => {
+            if (option.isSeparator) {
+              return <li key={option.value} className="separator" />;
+            }
+            return (
+              <li key={option.value} onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(option.value);
+              }}>
+                {option.name}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
