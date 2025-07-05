@@ -160,7 +160,7 @@ const CanvasParseTree: React.FC<CanvasParseTreeProps> = ({ data, isDarkMode }) =
     <div
       ref={containerRef}
       style={{ width: '100%', height: '100%', position: 'relative', background: isDarkMode ? '#1A202C' : '#FFFFFF' }}
-      aria-label="解析树容器"
+      aria-label="Parse Tree Container"
     >
       <canvas
         ref={canvasRef}

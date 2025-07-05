@@ -1,48 +1,86 @@
+:root {
+  color-scheme: light dark;
+  --bg-color: #ffffff;
+  --text-color: #212529;
+  --panel-bg-color: #f8f9fa;
+  --border-color: #dee2e6;
+  --toolbar-bg-color: #e9ecef;
+  --button-bg-color: #f8f9fa;
+  --button-hover-bg-color: #e9ecef;
+  --button-disabled-opacity: 0.65;
+  --link-stroke-color: #6c757d;
+  --spinner-color: #007bff;
+  --error-bg-color: #f8d7da;
+  --error-text-color: #721c24;
+  --error-border-color: #f5c6cb;
+}
+
+html.dark {
+  --bg-color: #121212;
+  --text-color: #e0e0e0;
+  --panel-bg-color: #1e1e1e;
+  --border-color: #333333;
+  --toolbar-bg-color: #252525;
+  --button-bg-color: #333333;
+  --button-hover-bg-color: #454545;
+  --link-stroke-color: #bbbbbb;
+  --spinner-color: #17a2b8;
+  --error-bg-color: #2c1d1f;
+  --error-text-color: #e5a0a7;
+  --error-border-color: #6f2d33;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  color-scheme: light;
+}
+
+.dark body {
+    color-scheme: dark;
+}
+
 .app-container {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-color);
 }
 
 .resize-handle {
-  background-color: #cccccc;
+  background-color: var(--border-color);
   position: relative;
 }
 
-/* 水平分割条样式 */
 div[data-panel-group-direction="vertical"] > .resize-handle {
-  height: 4px !important; /* 明确设置高度 */
-  width: 100%; /* 宽度自动填充 */
+  height: 4px !important;
+  width: 100%;
 }
 
-/* 垂直分割条样式 */
 div[data-panel-group-direction="horizontal"] > .resize-handle {
-  width: 4px !important; /* 明确设置宽度 */
-  height: 100%; /* 高度自动填充 */
+  width: 4px !important;
+  height: 100%;
 }
 
 .editor-container, .visualization-container {
-  padding: 0; /* 去除多余边距 */
+  padding: 0;
   height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: var(--panel-bg-color);
 }
 
 .editor-container h3 {
   text-align: center;
   margin: 4px 0;
   flex-shrink: 0;
+  color: var(--text-color);
 }
 
-.editor-panel {
-  height: 100%; /* 确保编辑器面板填充其容器 */
-}
-
-/* CodeMirror 编辑器高度 */
-.cm-editor {
-  height: 100%; /* 确保CodeMirror编辑器本身填充其容器 */
+.editor-panel, .cm-editor {
+  height: 100%;
 }
 
 .visualization-container {
@@ -51,108 +89,68 @@ div[data-panel-group-direction="horizontal"] > .resize-handle {
 }
 
 .toolbar {
-  padding: 4px 10px; /* 保留toolbar的边距 */
-  background-color: #e0e0e0;
-  border-bottom: 1px solid #ccc;
+  padding: 4px 10px;
+  background-color: var(--toolbar-bg-color);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   gap: 5px;
   align-items: center;
 }
 
-.toolbar button, .toolbar select {
+.toolbar-spacer {
+  flex-grow: 1;
+}
+
+.input-with-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbar button, .toolbar select, .start-rule-input, .searchable-select input {
   padding: 4px 8px;
   font-size: 13px;
   border-radius: 4px;
-  border: 1px solid #CBD5E0;
+  border: 1px solid var(--border-color);
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
 }
 
-.start-rule-input {
-  padding: 4px 8px;
-  font-size: 13px;
-  border-radius: 4px;
-  border: 1px solid #CBD5E0;
-  background-color: #fff;
-  color: #333;
+.toolbar button:hover, .toolbar select:hover {
+  background-color: var(--button-hover-bg-color);
 }
 
-body.dark .toolbar button, body.dark .toolbar select, body.dark .start-rule-input {
-    border-color: #444;
-    background-color: #3a3a3a;
-    color: #eee;
+.toolbar button:disabled {
+  opacity: var(--button-disabled-opacity);
+  cursor: not-allowed;
 }
 
+.start-rule-input::placeholder {
+  color: var(--text-color);
+  opacity: 0.7;
+}
 
-/* 树形图样式 */
 .link {
   fill: none;
-  stroke: #555;
-  stroke-opacity: 0.6;
+  stroke: var(--link-stroke-color);
+  stroke-opacity: 0.8;
   stroke-width: 1.5px;
 }
 
-/* --- Scrollbar Styling --- */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+
+.error-panel {
+  background-color: var(--error-bg-color);
+  border-top: 1px solid var(--error-border-color);
+  color: var(--error-text-color);
 }
 
-::-webkit-scrollbar-track {
-  background: #F7FAFC; /* Consistent with light theme background */
+.error-message {
+  padding: 8px 12px;
 }
-
-::-webkit-scrollbar-thumb {
-  background: #CBD5E0; /* Consistent with light theme borders */
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #A0AEC0; /* Consistent with light theme interactive elements */
-}
-
-/* Dark Mode Scrollbar Overrides */
-body.dark ::-webkit-scrollbar-track {
-  background: #1A202C; /* Consistent with dark theme background */
-}
-
-body.dark ::-webkit-scrollbar-thumb {
-  background: #4A5568; /* Consistent with dark theme borders */
-}
-
-body.dark ::-webkit-scrollbar-thumb:hover {
-  background: #718096; /* A slightly lighter shade for hover */
-}
-
-
-
-/* 暗色模式下的样式覆盖 */
-body.dark .resize-handle {
-  background-color: #3a3a3a; /* 暗色模式下分隔条背景色 */
-}
-
-body.dark .resize-handle:after {
-  border-left: 1px solid #444; /* 暗色模式下分隔条边框色 */
-}
-
-body.dark .toolbar {
-  background-color: #2a2a2a; /* 暗色模式下工具栏背景色 */
-  border-bottom: 1px solid #444; /* 暗色模式下工具栏边框色 */
-}
-
-body.dark .node text {
-  fill: rgba(255, 255, 255, 0.9); /* 暗色模式下文本颜色为亮白色 */
-}
-
 
 .searchable-select {
   position: relative;
   display: inline-block;
-}
-
-.searchable-select input {
-  padding: 4px 8px; /* 修正内边距 */
-  font-size: 13px; /* 统一字体大小 */
-  border: 1px solid #CBD5E0; /* 统一边框颜色 */
-  border-radius: 4px;
 }
 
 .searchable-select .options-list {
@@ -160,8 +158,8 @@ body.dark .node text {
   top: 100%;
   left: 0;
   right: 0;
-  background-color: white;
-  border: 1px solid #ccc;
+  background-color: var(--panel-bg-color);
+  border: 1px solid var(--border-color);
   border-top: none;
   border-radius: 0 0 4px 4px;
   list-style: none;
@@ -175,42 +173,66 @@ body.dark .node text {
 .searchable-select .options-list li {
   padding: 8px;
   cursor: pointer;
-  font-size: 13px; /* 统一字体大小 */
+  font-size: 13px;
+  color: var(--text-color);
 }
 
 .searchable-select .options-list li:hover {
-  background-color: #f0f0f0;
-}
-
-body.dark .searchable-select input {
-  border-color: #444;
-  background-color: #3a3a3a;
-  color: #eee;
-}
-
-body.dark .searchable-select .options-list {
-  background-color: #3a3a3a;
-  border-color: #444;
-}
-
-body.dark .searchable-select .options-list li {
-  color: #eee;
-}
-
-body.dark .searchable-select .options-list li:hover {
-  background-color: #4a5568;
+  background-color: var(--button-hover-bg-color);
 }
 
 .searchable-select .options-list .separator {
   height: 1px;
-  background-color: #ccc;
+  background-color: var(--border-color);
   margin: 5px 0;
   padding: 0;
   pointer-events: none;
 }
 
-
-.toolbar button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.mode-toggle {
+  background: var(--button-bg-color);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
 }
+
+.mode-toggle svg {
+  width: 26px;
+  height: 26px;
+  color: var(--text-color);
+}
+
+.parse-prompt {
+  padding: 10px;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.loading-spinner {
+  border: 4px solid var(--button-bg-color);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-top-color: var(--spinner-color);
+  animation: spin 1s ease-in-out infinite;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+

@@ -17,6 +17,8 @@ import {
   deleteCustomGrammar,
   type CustomGrammar,
 } from './services/grammarService';
+import SunIcon from './components/icons/SunIcon';
+import MoonIcon from './components/icons/MoonIcon';
 
 type UIState = 'INITIAL_LOADING' | 'IDLE' | 'PARSING' | 'LOADING_GRAMMAR';
 
@@ -40,8 +42,8 @@ const App: React.FC = () => {
       setGrammarsList(data);
       return data;
     } catch (error) {
-      console.error("获取语法索引失败:", error);
-      setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
+      console.error("Failed to fetch grammar index:", error);
+      setErrors(["Failed to fetch grammar index: " + (error instanceof Error ? error.message : String(error))]);
       return [];
     }
   };
@@ -126,13 +128,30 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSelectGrammar = (grammarInfo: GrammarInfo | undefined) => {
+  const handleSelectGrammar = async (grammarInfo: GrammarInfo | undefined) => {
     if (!grammarInfo || grammarInfo.url === 'separator') return;
-
+  
     setSelectedGrammar(grammarInfo.name);
     setUiState('LOADING_GRAMMAR');
 
-    loadGrammarContents(grammarInfo).then(files => {
+    // Clear previous content
+    setParserGrammar('');
+    setLexerGrammar('');
+    setInput('');
+    setVisualTree(null);
+    setErrors([]);
+  
+    const startTime = Date.now();
+  
+    try {
+      const files = await loadGrammarContents(grammarInfo);
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = 500 - elapsedTime;
+  
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+  
       setCurrentGrammarFiles(files);
       setParserGrammar(files.parserContent);
       setLexerGrammar(files.lexerContent);
@@ -140,17 +159,17 @@ const App: React.FC = () => {
       setStartRule(grammarInfo.start || '');
       setVisualTree(null);
       setErrors([]);
-      setUiState('IDLE');
       if (grammarInfo.isCustom) {
         setOriginalGrammarContent({ parser: files.parserContent, lexer: files.lexerContent });
       } else {
-        setOriginalGrammarContent({ parser: '', lexer: '' }); // Not a custom grammar, so nothing to save
+        setOriginalGrammarContent({ parser: '', lexer: '' });
       }
-    }).catch(error => {
-      console.error("加载预置语法失败:", error);
-      setErrors([`加载预置语法 '${grammarInfo.name}' 失败`]);
+    } catch (error) {
+      console.error("Failed to load preset grammar:", error);
+      setErrors([`Failed to load preset grammar '${grammarInfo.name}'`]);
+    } finally {
       setUiState('IDLE');
-    });
+    }
   };
 
   useEffect(() => {
@@ -162,8 +181,8 @@ const App: React.FC = () => {
           await handleSelectGrammar(firstSelectable);
         }
       } catch (error) {
-        console.error("初始化失败:", error);
-        setErrors(["获取语法索引失败: " + (error instanceof Error ? error.message : String(error))]);
+        console.error("Initialization failed:", error);
+        setErrors(["Failed to fetch grammar index: " + (error instanceof Error ? error.message : String(error))]);
       } finally {
         setUiState('IDLE');
       }
@@ -226,7 +245,7 @@ const App: React.FC = () => {
         setErrors(result.errors);
       }
     } catch (error) {
-      console.error('解析失败:', error);
+      console.error('Parse failed:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       setErrors([errorMessage]);
     } finally {
@@ -284,6 +303,9 @@ const App: React.FC = () => {
         <Panel defaultSize={40} minSize={20}>
           <div className="visualization-container">
             <div className="toolbar" role="toolbar">
+              <button onClick={toggleDarkMode} aria-label="Toggle Color Mode" className="mode-toggle">
+                {isDarkMode ? <SunIcon /> : <MoonIcon />}
+              </button>
               <SearchableSelect
                 options={grammarsList.map(g => ({ value: g.name, name: g.name, isSeparator: g.url === 'separator' }))}
                 value={selectedGrammar}
@@ -291,7 +313,7 @@ const App: React.FC = () => {
                   const selected = grammarsList.find(g => g.name === value);
                   handleSelectGrammar(selected);
                 }}
-                aria-label="选择预置语法"
+                aria-label="Select Preset Grammar"
               />
               {selectedGrammar && <button onClick={handleForkGrammar}>Fork</button>}
               <button
@@ -329,24 +351,26 @@ const App: React.FC = () => {
               >
                 Save
               </button>
-              <input
-                  type="text"
-                  value={startRule}
-                  onChange={(e) => setStartRule(e.target.value)}
-                  placeholder="Start Rule"
-                  className="start-rule-input"
-                  aria-label="输入起始规则"
-              />
+              <div className="toolbar-spacer"></div>
+              <div className="input-with-label">
+                <label htmlFor="start-rule">Start Rule:</label>
+                <input
+                    id="start-rule"
+                    type="text"
+                    value={startRule}
+                    onChange={(e) => setStartRule(e.target.value)}
+                    placeholder="Start Rule"
+                    className="start-rule-input"
+                    aria-label="Enter start rule"
+                />
+              </div>
               <button
                 onClick={handleParse}
                 data-testid="parse-button"
                 disabled={uiState !== 'IDLE'}
-                aria-label="解析语法"
+                aria-label="Parse Grammar"
               >
-                解析
-              </button>
-              <button onClick={toggleDarkMode} aria-label="切换颜色模式">
-                切换到 {isDarkMode ? '亮色模式' : '暗色模式'}
+                Parse
               </button>
             </div>
             {errors.length > 0 && (
@@ -359,13 +383,17 @@ const App: React.FC = () => {
               </div>
             )}
             <div style={{ flex: 1, height: 0 }} >
-              {uiState === 'INITIAL_LOADING' && <div>应用加载中...</div>}
-              {uiState === 'LOADING_GRAMMAR' && <div>加载语法中...</div>}
-              {uiState === 'PARSING' && <div>解析树加载中...</div>}
+              {uiState === 'INITIAL_LOADING' && <div className="loading-spinner" />}
+              {uiState === 'LOADING_GRAMMAR' && <div className="loading-spinner" />}
+              {uiState === 'PARSING' && <div className="loading-spinner" />}
               {uiState === 'IDLE' && visualTree && (
                   <CanvasParseTree data={visualTree} isDarkMode={isDarkMode} />
               )}
-              {uiState === 'IDLE' && !visualTree && <div>点击“解析”以生成解析树</div>}
+              {uiState === 'IDLE' && !visualTree && (
+                <div className="parse-prompt">
+                  <span role="img" aria-label="pointing up">☝️</span> Click "Parse" to generate the parse tree
+                </div>
+              )}
             </div>
           </div>
         </Panel>

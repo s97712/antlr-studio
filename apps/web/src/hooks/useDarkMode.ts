@@ -1,19 +1,42 @@
 import { useState, useEffect } from 'react';
 
 /**
- * 一个自定义 React Hook，用于管理和切换应用的亮/暗主题模式。
- * 它会同步将当前模式应用到 `document.body` 的 class 上。
- * @param {boolean} [initialValue=true] - 初始的主题模式，`true` 为暗色模式，`false` 为亮色模式。
- * @returns {[boolean, () => void]} 返回一个元组，包含：
- * - `isDarkMode` (boolean): 当前是否为暗色模式。
- * - `toggleDarkMode` (function): 一个用于切换主题模式的函数。
+ * A custom React Hook to manage and toggle the application's light/dark theme.
+ * It synchronizes the current mode to a class on `document.body` and persists the preference in localStorage.
+ * @returns {[boolean, () => void]} A tuple containing:
+ * - `isDarkMode` (boolean): Whether the dark mode is currently active.
+ * - `toggleDarkMode` (function): A function to toggle the theme.
  */
-export const useDarkMode = (initialValue: boolean = true): [boolean, () => void] => {
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(initialValue);
+export const useDarkMode = (): [boolean, () => void] => {
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const storedPreference = window.localStorage.getItem('theme');
+    if (storedPreference) {
+      return storedPreference === 'dark';
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
-  // 当 isDarkMode 状态变化时，同步更新 body 的 class
   useEffect(() => {
-    document.body.classList.toggle('dark', isDarkMode);
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      // Only change if there's no stored preference
+      if (!window.localStorage.getItem('theme')) {
+        setIsDarkMode(mediaQuery.matches);
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      window.localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      window.localStorage.setItem('theme', 'light');
+    }
   }, [isDarkMode]);
 
   const toggleDarkMode = () => {
