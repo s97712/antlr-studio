@@ -1,37 +1,56 @@
+<p>
+  <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">简体中文</a>
+</p>
+
 # ANTLR Playground
 
-这是一个基于React和Vite构建的ANTLR语法解析器在线演示平台。
+This is an online ANTLR grammar parser and visualizer built with React and Vite.
 
-## 项目结构
+## Features
 
-- `apps/web`: 前端React应用
-- `netlify/functions`: Netlify函数，用于执行ANTLR语法编译
+- **Live Parsing**: Edit your ANTLR v4 grammar (Lexer & Parser) and input text, then see the parse tree instantly.
+- **Interactive Parse Tree**: The generated parse tree is rendered on an HTML5 Canvas, allowing you to zoom, pan, and click to focus on specific nodes.
+- **Pre-loaded Grammars**: Comes with a list of pre-loaded grammar examples to get you started quickly.
+- **Custom Grammar Management**:
+    - **Save & Load**: Save your custom grammars locally in your browser.
+    - **Fork**: Create a new grammar based on an existing one.
+    - **Rename & Delete**: Manage your collection of custom grammars.
+## Project Structure
 
-## 启动项目
-在项目根目录执行：
+- `apps/web`: The frontend React application.
+- `netlify/functions`: Netlify serverless functions responsible for compiling the ANTLR grammar on the backend.
+
+## Getting Started
+
+To run the project locally, execute the following commands from the root directory:
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-以上命令将同时启动前端应用和Netlify Functions模拟器。
-- 前端应用将在 `http://localhost:5175` 启动。
-- Netlify Functions将在 `http://localhost:8888` 运行，供前端调用。
+This will start both the frontend application and the Netlify Functions emulator concurrently.
+- The frontend app will be available at `http://localhost:5175`.
+- The Netlify Functions will run at `http://localhost:8888` for the frontend to call.
 
-## 单独启动服务
+## Running Services Separately
 
-如果需要单独启动前端或后端服务进行调试，可以在项目根目录使用以下命令：
+If you need to start the frontend or backend services individually for debugging, you can use the following commands from the root directory:
 
-- **仅启动前端应用:**
+- **Start only the frontend application:**
 ```bash
 pnpm run dev:web
 ```
 
-- **仅启动Netlify Functions模拟器:**
+- **Start only the Netlify Functions emulator:**
 ```bash
 pnpm run dev:api
 ```
 
-## 测试
-本项目使用Cypress进行端到端测试。详细的测试指南，请参阅 [AI 测试指南](./AI_README.md)。
+## Testing
+
+This project uses Playwright for end-to-end testing. For a detailed guide on testing, please refer to the [AI Testing Guide](./AI_README.md).
+
+## TODO
+
+- [ ] Integrate AI to generate and iterate on grammars.
