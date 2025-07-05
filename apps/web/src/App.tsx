@@ -6,6 +6,7 @@ import D3ParseTree from './grammar/components/D3ParseTree';
 import CanvasParseTree from './grammar/components/CanvasParseTree';
 import type { TreeNode } from './grammar/parser/treeConverter';
 import { useDarkMode } from './hooks/useDarkMode';
+import SearchableSelect from './components/SearchableSelect';
 import {
   fetchGrammarList,
   loadGrammarContents,
@@ -30,26 +31,28 @@ const App: React.FC = () => {
   const [startRule, setStartRule] = useState<string>('');
   const [currentGrammarFiles, setCurrentGrammarFiles] = useState<GrammarFiles | null>(null);
 
-  const handleSelectGrammar = async (grammarInfo: GrammarInfo | undefined) => {
+  const handleSelectGrammar = (grammarInfo: GrammarInfo | undefined) => {
     if (!grammarInfo) return;
 
-    try {
-      setUiState('LOADING_GRAMMAR');
-      const files = await loadGrammarContents(grammarInfo);
+    // Immediately update the selected grammar to reflect in the UI
+    setSelectedGrammar(grammarInfo.name);
+    setUiState('LOADING_GRAMMAR');
+
+    // Fetch and update the rest of the state asynchronously
+    loadGrammarContents(grammarInfo).then(files => {
       setCurrentGrammarFiles(files);
       setParserGrammar(files.parserContent);
       setLexerGrammar(files.lexerContent);
       setInput(files.inputContent);
-      setSelectedGrammar(grammarInfo.name);
       setStartRule(grammarInfo.start || '');
       setVisualTree(null);
       setErrors([]);
-    } catch (error) {
+      setUiState('IDLE');
+    }).catch(error => {
       console.error("加载预置语法失败:", error);
       setErrors([`加载预置语法 '${grammarInfo.name}' 失败`]);
-    } finally {
       setUiState('IDLE');
-    }
+    });
   };
 
   useEffect(() => {
@@ -167,18 +170,15 @@ const App: React.FC = () => {
         <Panel defaultSize={40} minSize={20}>
           <div className="visualization-container">
             <div className="toolbar" role="toolbar">
-              <select
+              <SearchableSelect
+                options={grammarsList.map(g => ({ value: g.name, name: g.name }))}
                 value={selectedGrammar}
-                onChange={(e) => {
-                  const selected = grammarsList.find(g => g.name === e.target.value);
+                onChange={(value) => {
+                  const selected = grammarsList.find(g => g.name === value);
                   handleSelectGrammar(selected);
                 }}
                 aria-label="选择预置语法"
-              >
-                {grammarsList.map((g, i) => (
-                  <option key={`${g.name}-${i}`} value={g.name}>{g.name}</option>
-                ))}
-              </select>
+              />
               <input
                   type="text"
                   value={startRule}

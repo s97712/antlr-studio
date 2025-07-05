@@ -142,3 +142,61 @@ body.dark .node text {
   fill: rgba(255, 255, 255, 0.9); /* 暗色模式下文本颜色为亮白色 */
 }
 
+
+.searchable-select {
+  position: relative;
+  display: inline-block;
+}
+
+.searchable-select input {
+  padding: 4px 8px; /* 修正内边距 */
+  font-size: 13px; /* 统一字体大小 */
+  border: 1px solid #CBD5E0; /* 统一边框颜色 */
+  border-radius: 4px;
+}
+
+.searchable-select .options-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.searchable-select .options-list li {
+  padding: 8px;
+  cursor: pointer;
+  font-size: 13px; /* 统一字体大小 */
+}
+
+.searchable-select .options-list li:hover {
+  background-color: #f0f0f0;
+}
+
+body.dark .searchable-select input {
+  border-color: #444;
+  background-color: #3a3a3a;
+  color: #eee;
+}
+
+body.dark .searchable-select .options-list {
+  background-color: #3a3a3a;
+  border-color: #444;
+}
+
+body.dark .searchable-select .options-list li {
+  color: #eee;
+}
+
+body.dark .searchable-select .options-list li:hover {
+  background-color: #4a5568;
+}
