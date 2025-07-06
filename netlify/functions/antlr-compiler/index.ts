@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { execSync } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 export const handler: Handler = async (event) => {
@@ -23,7 +24,7 @@ export const handler: Handler = async (event) => {
   }
 
   // 创建临时目录
-  const tempDir = fs.mkdtempSync('antlr-compile-');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'antlr-compile-'));
   
   try {
     // 写入所有语法文件
