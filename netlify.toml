@@ -6,6 +6,8 @@
   directory = "netlify/functions"
   included_files = ["netlify/functions/antlr-compiler/antlr-4.13.1-complete.jar"]
 
+[functions."antlr-compiler"]
+  image = "netlify/functions/antlr-compiler"
 
 [dev]
   autoLaunch = false
