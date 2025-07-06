@@ -34,7 +34,7 @@ Thumbs.db
 
 .plans
 .roo
-generated
+# generated
 apps/web/public/pre-filled-grammars/
 
 test-results/
