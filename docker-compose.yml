@@ -1,0 +1,22 @@
+services:
+  web:
+    build:
+      context: .
+      target: web-production
+    ports:
+      - "8080:80"
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: .
+      target: api-production
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

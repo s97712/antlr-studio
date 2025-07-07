@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
     "test": "playwright test"
   },
   "keywords": [],
