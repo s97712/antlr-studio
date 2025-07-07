@@ -9,7 +9,7 @@ dist
 build
 
 # pnpm lockfile
-pnpm-lock.yaml
+# pnpm-lock.yaml
 
 # Cypress
 cypress/videos/
