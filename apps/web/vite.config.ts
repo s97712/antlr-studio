@@ -12,11 +12,11 @@ export default defineConfig({
     host: '0.0.0.0', // 允许外部访问
     port: 5175, // 更新端口以匹配测试配置
     proxy: {
-      '/.netlify/functions': {
-        target: `http://localhost:8888`,
+      '/api': {
+        target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: false
-      }
+        secure: false,
+      },
     },
     fs: {
       // 允许从父目录访问文件

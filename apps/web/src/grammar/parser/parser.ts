@@ -15,7 +15,7 @@ export async function parseInput(
   let parseTree: any = null;
 
   // 1. 向后端请求编译后的解析器文件
-  const response = await fetch('/.netlify/functions/antlr-compiler', {
+  const response = await fetch('/api/compile', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

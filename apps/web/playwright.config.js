@@ -15,7 +15,7 @@ export default defineConfig({
     },
     {
       command: 'pnpm --dir ../.. run dev:api',
-      url: 'http://localhost:8888/.netlify/functions/ping',
+      url: 'http://localhost:3000/api/ping',
       reuseExistingServer: !process.env.CI,
     }
   ],
