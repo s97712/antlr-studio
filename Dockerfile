@@ -1,6 +1,8 @@
 # Stage 1: Builder
 FROM node:18-alpine AS builder
 
+# Install dependencies includjng pnpm, and bash for scripts
+RUN apk add --no-cache pnpm bash 
 # Set working directory
 WORKDIR /app
 
@@ -47,7 +49,7 @@ COPY --from=builder /app/apps/api/resources ./apps/api/resources
 # Remove the default nginx config to prevent conflicts
 RUN rm -f /etc/nginx/conf.d/default.conf
 # Copy our custom nginx configuration
-COPY apps/web/nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose the port nginx will listen on
 EXPOSE 80
