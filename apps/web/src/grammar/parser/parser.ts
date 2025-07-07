@@ -56,7 +56,7 @@ export async function parseInput(
   });
 
   for (const file of sortedFiles) {
-    let finalContent = file.content.replace(/import\s+(\w+)\s+from\s+'\.\/(\w+)\.js';/g, (match, moduleName) => {
+    const finalContent = file.content.replace(/import\s+(\w+)\s+from\s+'\.\/(\w+)\.js';/g, (match, moduleName) => {
       return `const ${moduleName} = window.exportsMap.${moduleName}.default;`;
     });
     

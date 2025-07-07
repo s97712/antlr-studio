@@ -18,7 +18,6 @@ This is an online ANTLR grammar parser and visualizer built with React and Vite.
 ## Project Structure
 
 - `apps/web`: The frontend React application.
-- `netlify/functions`: Netlify serverless functions responsible for compiling the ANTLR grammar on the backend.
 
 ## Getting Started
 

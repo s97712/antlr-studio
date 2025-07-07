@@ -144,7 +144,7 @@ function getRelativePathFromUrl(fileUrl: string | undefined): string | null {
             }
         }
         return fileUrl;
-    } catch (e) {
+    } catch {
         console.error(`Invalid URL or path: ${fileUrl}`);
         return null;
     }

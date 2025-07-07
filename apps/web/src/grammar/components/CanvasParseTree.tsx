@@ -146,7 +146,7 @@ const CanvasParseTree: React.FC<CanvasParseTreeProps> = ({ data, isDarkMode }) =
     };
     const hierarchy = d3.hierarchy(data);
     const treeLayout = flextree<TreeNode>({
-        nodeSize: node => [20, 30], // Placeholder size, won't be used for drawing
+        nodeSize: () => [20, 30], // Placeholder size, won't be used for drawing
         spacing: 20,
     })(hierarchy);
     const rootNode = treeLayout.descendants()[0];

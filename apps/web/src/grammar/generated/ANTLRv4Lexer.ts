@@ -456,5 +456,5 @@ export default class ANTLRv4Lexer extends LexerAdaptor {
 	}
 
 
-	static DecisionsToDFA = ANTLRv4Lexer._ATN.decisionToState.map( (ds: DecisionState, index: number) => new DFA(ds, index) );
+	static DecisionsToDFA = ANTLRv4Lexer._ATN.decisionToState.map( (ds, index: number) => new DFA(ds, index) );
 }

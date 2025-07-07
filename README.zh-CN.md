@@ -20,7 +20,6 @@
 ## 项目结构
 
 - `apps/web`: 前端React应用
-- `netlify/functions`: Netlify无服务器函数，用于在后端执行ANTLR语法编译。
 
 ## 启动项目
 

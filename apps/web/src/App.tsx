@@ -48,14 +48,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveGrammar = async (grammar: CustomGrammar) => {
-    await saveCustomGrammar(grammar);
-    const updatedList = await refreshGrammarList();
-    const newGrammar = updatedList.find(g => g.name === grammar.name);
-    if (newGrammar) {
-      handleSelectGrammar(newGrammar);
-    }
-  };
 
   const handleRenameGrammar = async () => {
     const oldGrammar = grammarsList.find(g => g.name === selectedGrammar);

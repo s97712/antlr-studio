@@ -22,6 +22,7 @@
     "@stagewise-plugins/react": "^0.4.9",
     "@stagewise/toolbar-react": "^0.4.9",
     "@types/codemirror": "^5.60.16",
+    "@types/cors": "^2.8.19",
     "@types/d3": "^7.4.3",
     "@uiw/codemirror-theme-dracula": "^4.23.13",
     "@uiw/codemirror-theme-github": "^4.23.13",
@@ -30,8 +31,9 @@
     "antlr4ng": "^3.0.16",
     "antlr4ts": "^0.5.0-alpha.4",
     "codemirror": "^6.0.2",
-    "cross-env": "^7.0.3",
+    "cors": "^2.8.5",
     "d3": "^7.9.0",
+    "d3-flextree": "^2.1.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-resizable-panels": "^3.0.3"
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@playwright/test": "^1.53.2",
+    "@types/d3-flextree": "^2.1.4",
     "@types/node": "^24.0.3",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
